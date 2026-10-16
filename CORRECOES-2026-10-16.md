@@ -2,14 +2,14 @@
 
 ## Estado da entrega
 
-Código corrigido e validado em cópia local. Banco localizado no Lovable Cloud,
-projeto Neon Ledger / Pulse Drink Flow. Backup completo de leitura exportado e
-validado em 16/10/2026. Nenhuma restauração, exclusão ou alteração dos registros
-de vendas, estoque ou caixa foi executada.
-As três migrações de preparação precisam ser instaladas antes do frontend.
-Uma quarta migração ativa as novas políticas somente depois da publicação.
-Essa instalação em duas etapas mantém o frontend anterior funcionando durante
-a preparação. Não publicar apenas o frontend.
+Código integrado ao GitHub oficial e publicado no Lovable. As quatro migrações
+de 16/10/2026 já estão aplicadas no Supabase gerenciado pelo Lovable Cloud,
+projeto Neon Ledger / Pulse Drink Flow. O backup completo foi exportado e
+validado, e a preparação confirmou a preservação dos registros existentes.
+Nenhuma restauração ou exclusão de dados comerciais foi executada na implantação.
+Os ajustes posteriores de PIN e indicadores também estão publicados.
+Consultar [ACESSO-E-MANUTENCAO.md](ACESSO-E-MANUTENCAO.md) para links, estado
+atual e próximas alterações. Não repetir a instalação inicial.
 
 ## O que mudou
 
@@ -62,8 +62,9 @@ como paga para registrar a saída efetiva do caixa.
 ## PIN de abertura
 
 Após o primeiro login com e-mail e senha, o usuário cadastra e confirma um PIN de
-4 números neste aparelho. O aplicativo solicita o PIN em cada carregamento e
-quando volta do segundo plano. A navegação interna mantém o desbloqueio.
+4 números neste aparelho. O desbloqueio permanece na recarga da mesma aba e
+em um retorno breve do segundo plano. O PIN é solicitado após 15 minutos de
+inatividade; sair da conta remove o desbloqueio. Uma nova sessão pode pedir o PIN.
 O PIN é um bloqueio local da interface e não substitui a sessão autenticada nem
 as regras de acesso do banco. O aparelho salva um verificador derivado com salt
 aleatório e PBKDF2; o PIN não é salvo em texto. Após cinco tentativas incorretas,
@@ -72,7 +73,13 @@ confirmar a senha da mesma conta. Em outro aparelho, o PIN é cadastrado novamen
 Os números do PIN serão escolhidos pelo usuário na interface, sem compartilhamento
 no chat e sem qualquer alteração nos dados de vendas/estoque/financeiro.
 
-## Instalação preservando os registros
+## Histórico da instalação inicial — já executada
+
+As etapas abaixo são o plano original, não uma tarefa pendente. Na implantação
+real, a proteção final foi ativada antes de concluir a publicação para satisfazer
+a verificação de segurança, com possível interrupção temporária da interface
+antiga. Banco e interface protegidos já estão publicados. Para futuras alterações,
+seguir o guia de manutenção e não repetir esta instalação.
 
 1. Guardar um backup íntegro do banco e confirmar o projeto Supabase de destino.
 2. Conferir o histórico de migrações aplicado no servidor. **Não executar todas
@@ -103,7 +110,7 @@ no chat e sem qualquer alteração nos dados de vendas/estoque/financeiro.
 ## Validação local
 
 - Verificação TypeScript sem erros.
-- Testes de interface/lógica: `npm test` (25 testes, incluindo o demonstrativo).
+- Testes de interface/lógica: `npm test` (46 testes na última entrega funcional).
 - Análise de código: `npm run lint` (sem erros; avisos preexistentes de Fast Refresh).
 - Compilação: `npm run build`.
 - Integração das migrações: `scripts/verify-transactions.mjs` utiliza PostgreSQL
