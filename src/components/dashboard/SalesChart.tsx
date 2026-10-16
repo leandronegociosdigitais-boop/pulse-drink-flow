@@ -1,4 +1,3 @@
-import { useState } from "react";
 import { AreaChart, Area, XAxis, YAxis, ResponsiveContainer, Tooltip } from "recharts";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -23,7 +22,7 @@ export function SalesChart({ data, period, onPeriodChange }: SalesChartProps) {
     <Card>
       <CardHeader className="pb-2">
         <div className="flex items-center justify-between">
-          <CardTitle className="text-sm font-medium">Vendas</CardTitle>
+          <CardTitle className="text-sm font-medium">Vendas Recebidas</CardTitle>
           <Tabs value={period} onValueChange={onPeriodChange}>
             <TabsList className="h-8">
               <TabsTrigger value="day" className="text-xs px-2 h-6">
@@ -70,7 +69,7 @@ export function SalesChart({ data, period, onPeriodChange }: SalesChartProps) {
                   fontSize: "12px",
                 }}
                 labelStyle={{ color: "hsl(0, 0%, 95%)" }}
-                formatter={(value: number) => [formatCurrency(value), "Vendas"]}
+                formatter={(value: number) => [formatCurrency(value), "Recebido"]}
               />
               <Area
                 type="monotone"

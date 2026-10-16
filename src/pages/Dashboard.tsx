@@ -9,7 +9,8 @@ import { InvestmentChart } from "@/components/dashboard/InvestmentChart";
 import { DashboardBanner } from "@/components/dashboard/DashboardBanner";
 import { DailyGoalCard } from "@/components/dashboard/DailyGoalCard";
 import { Button } from "@/components/ui/button";
-import { useTodaySales, useMonthSales, useSales } from "@/hooks/useSales";
+import { useReceivedSales } from "@/hooks/useReceivedSales";
+import { receivedBetween } from "@/lib/receivedSales";
 import { useCashBalance } from "@/hooks/useCashFlow";
 import { useCurrentInvestment } from "@/hooks/useInvestment";
 
@@ -24,9 +25,12 @@ function formatCurrency(value: number) {
 export default function Dashboard() {
   const navigate = useNavigate();
   const [chartPeriod, setChartPeriod] = useState("week");
-  const { data: todaySales = [] } = useTodaySales();
-  const { data: monthSales = [] } = useMonthSales();
-  const { data: allSales = [] } = useSales();
+  const { data: allSales = [], isError: receiptsError } = useReceivedSales();
+  const now = new Date();
+  const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const tomorrow = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1);
+  const todaySales = receivedBetween(allSales, todayStart, tomorrow);
+  const monthSales = receivedBetween(allSales, new Date(now.getFullYear(), now.getMonth(), 1), new Date(now.getFullYear(), now.getMonth() + 1, 1));
   const { data: cashBalance = 0 } = useCashBalance();
   const { data: investment } = useCurrentInvestment();
   const isStandalone =
@@ -69,18 +73,14 @@ export default function Dashboard() {
   const getChartData = () => {
     let days = 7;
     let dateFormat: Intl.DateTimeFormatOptions = { weekday: "short" };
-    let salesData = monthSales;
 
     if (chartPeriod === "day") {
       // Últimas 24 horas por hora
       const hours = Array.from({ length: 24 }, (_, i) => {
         const date = new Date();
         date.setHours(date.getHours() - (23 - i), 0, 0, 0);
-        const hourStr = date.toISOString().slice(0, 13);
-        
-        const hourTotal = todaySales
-          .filter((s) => s.created_at.slice(0, 13) === hourStr)
-          .reduce((acc, s) => acc + s.total_amount, 0);
+        const hourEnd = new Date(date.getTime() + 60 * 60 * 1000);
+        const hourTotal = receivedBetween(allSales, date, hourEnd).reduce((acc, s) => acc + s.total_amount, 0);
 
         return {
           date: date.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" }),
@@ -93,17 +93,14 @@ export default function Dashboard() {
     if (chartPeriod === "month") {
       days = 30;
       dateFormat = { day: "numeric" };
-      salesData = allSales;
     }
 
     return Array.from({ length: days }, (_, i) => {
       const date = new Date();
       date.setDate(date.getDate() - (days - 1 - i));
-      const dateStr = date.toISOString().split("T")[0];
-      
-      const dayTotal = salesData
-        .filter((s) => s.created_at.startsWith(dateStr))
-        .reduce((acc, s) => acc + s.total_amount, 0);
+      const start = new Date(date.getFullYear(), date.getMonth(), date.getDate());
+      const end = new Date(date.getFullYear(), date.getMonth(), date.getDate() + 1);
+      const dayTotal = receivedBetween(allSales, start, end).reduce((acc, s) => acc + s.total_amount, 0);
 
       return {
         date: date.toLocaleDateString("pt-BR", dateFormat),
@@ -121,22 +118,24 @@ export default function Dashboard() {
       <div className="p-4 space-y-4 animate-fade-in">
         {/* Banner */}
         <DashboardBanner />
+        <p className="text-xs text-muted-foreground">Valores recebidos na data do pagamento. Vendas pendentes ficam em A Receber.</p>
+        {receiptsError && <p role="alert" className="text-sm text-destructive">Não foi possível carregar os recebimentos. Tente atualizar a página.</p>}
 
         {/* KPIs */}
         <div className="grid grid-cols-2 gap-3">
           <KPICard
-            title="Vendas Hoje"
+            title="Recebido Hoje"
             value={formatCurrency(todayTotal)}
             icon={<ShoppingCart className="w-5 h-5" />}
             variant="primary"
           />
           <KPICard
-            title="Vendas Mês"
+            title="Recebido no Mês"
             value={formatCurrency(monthTotal)}
             icon={<DollarSign className="w-5 h-5" />}
           />
           <KPICard
-            title="Lucro Total"
+            title="Lucro Recebido no Mês"
             value={formatCurrency(totalProfit)}
             icon={<TrendingUp className="w-5 h-5" />}
             variant="primary"

@@ -55,7 +55,7 @@ export function DailyGoalCard({ todayTotal }: Props) {
             ) : (
               <Target className="w-4 h-4 text-primary" />
             )}
-            <span className="text-sm font-medium">Meta do Dia</span>
+            <span className="text-sm font-medium">Meta de Recebimentos do Dia</span>
           </div>
           <Dialog open={open} onOpenChange={(v) => { setOpen(v); if (v) setInput(goal ? String(goal) : ""); }}>
             <DialogTrigger asChild>

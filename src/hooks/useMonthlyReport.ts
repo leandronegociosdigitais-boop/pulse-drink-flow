@@ -1,5 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { fetchReceivedSales, fetchReceivedItems, readReportRows } from "@/lib/reportQueries";
+import { receivedBetween, netReceivedItems } from "@/lib/receivedSales";
 
 export interface MonthlyProductSale {
   product_id: string;
@@ -35,15 +37,8 @@ export function useMonthlyReport(year: number, month: number) {
         year: "numeric",
       });
 
-      // 1. Sales in the month (only paid count for revenue/profit accuracy)
-      const { data: salesData, error: salesError } = await supabase
-        .from("sales")
-        .select("id, total_amount, total_profit, status")
-        .gte("created_at", start.toISOString())
-        .lt("created_at", end.toISOString());
-      if (salesError) throw salesError;
-
-      const paidSales = (salesData || []).filter((s) => s.status === "pago");
+      // Recognize payment in the month it reaches cash, including legacy receipts.
+      const paidSales = receivedBetween(await fetchReceivedSales(), start, end);
       const totalSold = paidSales.reduce((acc, s) => acc + Number(s.total_amount), 0);
       const totalProfit = paidSales.reduce((acc, s) => acc + Number(s.total_profit), 0);
       const totalSales = paidSales.length;
@@ -53,11 +48,7 @@ export function useMonthlyReport(year: number, month: number) {
       // 2. Items per product
       let productSales: MonthlyProductSale[] = [];
       if (saleIds.length > 0) {
-        const { data: itemsData, error: itemsError } = await supabase
-          .from("sale_items")
-          .select("product_id, quantity, subtotal, profit, products:product_id (name)")
-          .in("sale_id", saleIds);
-        if (itemsError) throw itemsError;
+        const itemsData = netReceivedItems(paidSales, await fetchReceivedItems(saleIds));
 
         const map = new Map<string, MonthlyProductSale>();
         for (const item of itemsData || []) {
@@ -84,23 +75,21 @@ export function useMonthlyReport(year: number, month: number) {
       }
 
       // 3. Expenses (cash_flow saidas) in the month
-      const { data: cashOut, error: cashError } = await supabase
+      const cashOut = await readReportRows((from, to) => supabase
         .from("cash_flow")
         .select("amount, category")
         .eq("type", "saida")
         .gte("created_at", start.toISOString())
-        .lt("created_at", end.toISOString());
-      if (cashError) throw cashError;
+        .lt("created_at", end.toISOString()).order("id").range(from, to));
 
       const totalExpenses = (cashOut || []).reduce((acc, c) => acc + Number(c.amount), 0);
 
       // 4. Investment (purchases) in the month
-      const { data: purchases, error: purchaseError } = await supabase
+      const purchases = await readReportRows((from, to) => supabase
         .from("purchases")
         .select("total_amount")
         .gte("created_at", start.toISOString())
-        .lt("created_at", end.toISOString());
-      if (purchaseError) throw purchaseError;
+        .lt("created_at", end.toISOString()).order("id").range(from, to));
 
       const totalInvestment = (purchases || []).reduce(
         (acc, p) => acc + Number(p.total_amount),

@@ -125,7 +125,7 @@ export default function VendaDetalhe() {
                 </div>
                 <div className="text-right">
                   <p className="font-medium">{formatCurrency(item.subtotal)}</p>
-                  <p className="text-xs text-primary">+{formatCurrency(item.profit)}</p>
+                  <p className="text-xs text-primary">{sale.status === "pendente" ? "Previsto: " : ""}+{formatCurrency(item.profit)}</p>
                 </div>
               </div>
             ))}
@@ -158,7 +158,7 @@ export default function VendaDetalhe() {
             </div>
             
             <div className="flex justify-between text-sm">
-              <span className="text-muted-foreground">Lucro</span>
+              <span className="text-muted-foreground">{sale.status === "pendente" ? "Lucro previsto" : "Lucro recebido"}</span>
               <span className="text-primary">{formatCurrency(sale.total_profit)}</span>
             </div>
             
