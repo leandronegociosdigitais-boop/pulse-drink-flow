@@ -1,73 +1,57 @@
-# Welcome to your Lovable project
+# Pulse Drink Flow — gestão de vendas de bebidas
 
-## Project info
+Aplicativo em produção, também identificado como **Bebidas Manager** na interface
+e **Neon Ledger** no painel do Lovable.
 
-**URL**: https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID
+## Onde acessar
 
-## How can I edit this code?
+| Recurso | Endereço / identificação |
+| --- | --- |
+| Aplicativo publicado | https://pulse-drink-flow.lovable.app |
+| Projeto no Lovable | https://lovable.dev/projects/100a57a4-f2c4-405f-9b03-1990dc999d0b |
+| Workspace / proprietário no Lovable | Petcia's Lovable / Petcia Banhotosa |
+| GitHub oficial | https://github.com/petciabanhotosa-png/pulse-drink-flow |
+| Branch de produção | `main` |
+| Banco | Supabase gerenciado pelo **Lovable Cloud**, referência `ivaydxuisdzpdvqmfxfo` |
 
-There are several ways of editing your application.
+**Comece por [ACESSO-E-MANUTENCAO.md](ACESSO-E-MANUTENCAO.md)** antes de alterar,
+publicar ou trabalhar no banco. O guia explica os acessos, o estado da entrega,
+as regras de negócio e a manutenção com preservação dos dados.
 
-**Use Lovable**
+## Estado em 16/10/2026
 
-Simply visit the [Lovable Project](https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID) and start prompting.
+- Correções de integridade, seis ajustes, parcelamento, login e proteção do banco:
+  [PR #5](https://github.com/petciabanhotosa-png/pulse-drink-flow/pull/5), integrado e publicado.
+- PIN mantém acesso ao atualizar a página e bloqueia após 15 minutos sem uso:
+  [PR #6](https://github.com/petciabanhotosa-png/pulse-drink-flow/pull/6), integrado e publicado.
+- Indicadores e lucro contam somente vendas pagas, na data do recebimento:
+  [PR #7](https://github.com/petciabanhotosa-png/pulse-drink-flow/pull/7), integrado e publicado.
+- As quatro migrações de 16/10/2026 já foram aplicadas no banco de produção.
+  **Não reaplicar a instalação inicial.** Os dados existentes foram preservados.
 
-Changes made via Lovable will be committed automatically to this repo.
+Detalhes em [CORRECOES-2026-10-16.md](CORRECOES-2026-10-16.md).
 
-**Use your preferred IDE**
+## Desenvolvimento local
 
-If you want to work locally using your own IDE, you can clone this repo and push changes. Pushed changes will also be reflected in Lovable.
-
-The only requirement is having Node.js & npm installed - [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating)
-
-Follow these steps:
+Stack: React 18, TypeScript, Vite, Tailwind, shadcn/ui, TanStack Query,
+Supabase e PWA.
 
 ```sh
-# Step 1: Clone the repository using the project's Git URL.
-git clone <YOUR_GIT_URL>
-
-# Step 2: Navigate to the project directory.
-cd <YOUR_PROJECT_NAME>
-
-# Step 3: Install the necessary dependencies.
-npm i
-
-# Step 4: Start the development server with auto-reloading and an instant preview.
+git clone https://github.com/petciabanhotosa-png/pulse-drink-flow.git
+cd pulse-drink-flow
+npm ci
 npm run dev
 ```
 
-**Edit a file directly in GitHub**
+O servidor local usa a porta `8080`. Confira [.env.example](.env.example) e o
+backend configurado antes de testar gravações: executar localmente não cria um
+banco separado.
 
-- Navigate to the desired file(s).
-- Click the "Edit" button (pencil icon) at the top right of the file view.
-- Make your changes and commit the changes.
+```sh
+npm test
+npm run lint
+npm run build
+```
 
-**Use GitHub Codespaces**
-
-- Navigate to the main page of your repository.
-- Click on the "Code" button (green button) near the top right.
-- Select the "Codespaces" tab.
-- Click on "New codespace" to launch a new Codespace environment.
-- Edit files directly within the Codespace and commit and push your changes once you're done.
-
-## What technologies are used for this project?
-
-This project is built with:
-
-- Vite
-- TypeScript
-- React
-- shadcn-ui
-- Tailwind CSS
-
-## How can I deploy this project?
-
-Simply open [Lovable](https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID) and click on Share -> Publish.
-
-## Can I connect a custom domain to my Lovable project?
-
-Yes, you can!
-
-To connect a domain, navigate to Project > Settings > Domains and click Connect Domain.
-
-Read more here: [Setting up a custom domain](https://docs.lovable.dev/features/custom-domain#custom-domain)
+A publicação é feita no **Publish** do projeto correto no Lovable, após conferir
+a integração da alteração na `main` do GitHub oficial.
