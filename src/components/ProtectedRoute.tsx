@@ -3,6 +3,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
+import { PinGuard } from "@/components/PinGuard";
 
 export function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { user, loading, signOut } = useAuth();
@@ -37,5 +38,5 @@ export function ProtectedRoute({ children }: { children: React.ReactNode }) {
     </div>;
   }
 
-  return <>{children}</>;
+  return <PinGuard key={user.id}>{children}</PinGuard>;
 }

@@ -2,8 +2,10 @@
 
 ## Estado da entrega
 
-Código corrigido e validado em cópia local. Nenhuma conexão ao banco de produção,
-restauração, exclusão ou alteração de registros reais foi executada.
+Código corrigido e validado em cópia local. Banco localizado no Lovable Cloud,
+projeto Neon Ledger / Pulse Drink Flow. Backup completo de leitura exportado e
+validado em 16/10/2026. Nenhuma restauração, exclusão ou alteração dos registros
+de vendas, estoque ou caixa foi executada.
 As três migrações novas ainda precisam ser instaladas no Supabase antes de
 publicar esta versão do aplicativo. Não publicar apenas o frontend.
 
@@ -55,6 +57,19 @@ novas das contas são opcionais e não alteram valores, vencimentos ou pagamento
 anteriores. Não há pagamento automático no vencimento: é preciso marcar a parcela
 como paga para registrar a saída efetiva do caixa.
 
+## PIN de abertura
+
+Após o primeiro login com e-mail e senha, o usuário cadastra e confirma um PIN de
+4 números neste aparelho. O aplicativo solicita o PIN em cada carregamento e
+quando volta do segundo plano. A navegação interna mantém o desbloqueio.
+O PIN é um bloqueio local da interface e não substitui a sessão autenticada nem
+as regras de acesso do banco. O aparelho salva um verificador derivado com salt
+aleatório e PBKDF2; o PIN não é salvo em texto. Após cinco tentativas incorretas,
+as próximas tentativas têm espera progressiva. Para redefinir o PIN, é necessário
+confirmar a senha da mesma conta. Em outro aparelho, o PIN é cadastrado novamente.
+Os números do PIN serão escolhidos pelo usuário na interface, sem compartilhamento
+no chat e sem qualquer alteração nos dados de vendas/estoque/financeiro.
+
 ## Instalação preservando os registros
 
 1. Guardar um backup íntegro do banco e confirmar o projeto Supabase de destino.
@@ -83,7 +98,7 @@ como paga para registrar a saída efetiva do caixa.
 ## Validação local
 
 - Verificação TypeScript sem erros.
-- Testes de interface/lógica: `npm test` (20 testes, incluindo o demonstrativo).
+- Testes de interface/lógica: `npm test` (25 testes, incluindo o demonstrativo).
 - Análise de código: `npm run lint` (sem erros; avisos preexistentes de Fast Refresh).
 - Compilação: `npm run build`.
 - Integração das migrações: `scripts/verify-transactions.mjs` utiliza PostgreSQL

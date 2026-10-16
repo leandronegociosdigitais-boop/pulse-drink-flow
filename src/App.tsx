@@ -6,6 +6,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
+import { PinProvider } from "@/contexts/PinContext";
 
 const Dashboard = lazy(() => import("./pages/Dashboard"));
 const Vendas = lazy(() => import("./pages/Vendas"));
@@ -57,6 +58,7 @@ const App = () => (
       <Toaster />
       <Sonner />
       <AuthProvider>
+        <PinProvider>
         <BrowserRouter>
           <Routes>
             <Route path="/login" element={<Suspense fallback={<PageLoader />}><Login /></Suspense>} />
@@ -78,6 +80,7 @@ const App = () => (
             <Route path="*" element={<Suspense fallback={<PageLoader />}><NotFound /></Suspense>} />
           </Routes>
         </BrowserRouter>
+        </PinProvider>
       </AuthProvider>
     </TooltipProvider>
   </QueryClientProvider>
