@@ -29,7 +29,18 @@ const rawSnapshot = async () => (await db.query(`SELECT jsonb_build_object(
  'bills',(SELECT jsonb_agg(to_jsonb(t)-'installment_group_id'-'installment_number'-'installment_count'-'purchase_id' ORDER BY id) FROM bills t),
  'movements',(SELECT jsonb_agg(to_jsonb(t) ORDER BY id) FROM inventory_movements t)) AS snapshot`)).rows[0].snapshot;
 const original = await rawSnapshot();
-for (const migration of migrations.filter(x=>x>='20261016')) await db.exec(readFileSync(root+'supabase/migrations/'+migration,'utf8'));
+const upgrades=migrations.filter(x=>x>='20261016');
+if (process.env.PULSE_PHASE_ONE_BUNDLE) {
+ await db.exec('CREATE SCHEMA supabase_migrations; CREATE TABLE supabase_migrations.schema_migrations(version text PRIMARY KEY,name text,statements text[])');
+ await db.exec(readFileSync(process.env.PULSE_PHASE_ONE_BUNDLE,'utf8'));
+} else {
+ for (const migration of upgrades.filter(x=>!x.includes('activate_member_policies'))) await db.exec(readFileSync(root+'supabase/migrations/'+migration,'utf8'));
+}
+await db.exec('SET ROLE anon');
+assert.equal((await db.query('SELECT count(*)::int AS n FROM products')).rows[0].n,2);
+assert.equal((await db.query("SELECT has_function_privilege('anon','public.fifo_consume_batches(uuid,integer,uuid)','EXECUTE') AS allowed")).rows[0].allowed,true);
+await db.exec('RESET ROLE'); checks++;
+for (const migration of upgrades.filter(x=>x.includes('activate_member_policies'))) await db.exec(readFileSync(root+'supabase/migrations/'+migration,'utf8'));
 assert.deepEqual(await rawSnapshot(),original); checks++;
 const call = async payload => (await db.query('SELECT public.app_operation($1::jsonb) AS result',[JSON.stringify(payload)])).rows[0].result;
 const backup = async () => (await db.query('SELECT public.export_app_backup() AS result')).rows[0].result;

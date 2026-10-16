@@ -6,8 +6,10 @@ Código corrigido e validado em cópia local. Banco localizado no Lovable Cloud,
 projeto Neon Ledger / Pulse Drink Flow. Backup completo de leitura exportado e
 validado em 16/10/2026. Nenhuma restauração, exclusão ou alteração dos registros
 de vendas, estoque ou caixa foi executada.
-As três migrações novas ainda precisam ser instaladas no Supabase antes de
-publicar esta versão do aplicativo. Não publicar apenas o frontend.
+As três migrações de preparação precisam ser instaladas antes do frontend.
+Uma quarta migração ativa as novas políticas somente depois da publicação.
+Essa instalação em duas etapas mantém o frontend anterior funcionando durante
+a preparação. Não publicar apenas o frontend.
 
 ## O que mudou
 
@@ -76,12 +78,13 @@ no chat e sem qualquer alteração nos dados de vendas/estoque/financeiro.
 2. Conferir o histórico de migrações aplicado no servidor. **Não executar todas
    as migrações antigas indiscriminadamente:** há arquivos antigos com comandos
    de recálculo de estoque, fora do escopo desta entrega.
-3. Instalar somente as novas migrações, nesta ordem, cada uma em uma transação:
+3. Instalar somente as três migrações de preparação, nesta ordem e em transação:
    - `supabase/migrations/20261016120000_atomic_operations.sql`
    - `supabase/migrations/20261016121000_atomic_backups.sql`
    - `supabase/migrations/20261016122000_installment_payables.sql`
 4. A primeira cria duas tabelas auxiliares, copia apenas os identificadores das
-   contas atuais para a lista de autorização e instala regras/funções. A segunda
+   contas atuais para a lista de autorização e instala funções novas sem substituir
+   a função FIFO antiga nem as políticas das tabelas existentes. A segunda
    apenas instala funções de backup. A terceira adiciona metadados opcionais de
    parcelamento às contas e funções de compra a prazo/geração de parcelas.
    A instalação não executa as funções de
@@ -90,9 +93,11 @@ no chat e sem qualquer alteração nos dados de vendas/estoque/financeiro.
    Se não houver contas cadastradas, a instalação é interrompida antes de alterar
    o acesso. Colunas opcionais `sales.paid_at` e `purchases.supplier` são adicionadas
    somente se estiverem ausentes no esquema do servidor.
-5. Publicar o aplicativo depois das migrações. A versão nova recusa operar se as
+5. Publicar o aplicativo depois das três migrações de preparação. A versão nova recusa operar se as
    funções necessárias não estiverem instaladas, em vez de gravar parcialmente.
-6. Validar login e exportação no ambiente de destino. Testes de criação/alteração
+6. Após a publicação, instalar `20261016123000_activate_member_policies.sql` para
+   restringir as tabelas aos usuários autorizados e revogar o FIFO legado.
+7. Validar login, PIN e exportação no ambiente de destino. Testes de criação/alteração
    devem usar um ambiente de homologação, não os registros reais.
 
 ## Validação local
@@ -117,4 +122,5 @@ O motor local não substitui homologação com a configuração real do Supabase
 Parcelamento validado também com compra a prazo sem movimentação de caixa,
 pagamento individual de parcela, geração de meses seguintes e rollback de toda
 a compra/conta se qualquer parcela falhar. O roteiro de integração cobre 27
-verificações de banco, com dados fictícios.
+verificações de banco, com dados fictícios. Há também uma verificação adicional
+de compatibilidade do frontend anterior durante a fase de preparação (28 no total).

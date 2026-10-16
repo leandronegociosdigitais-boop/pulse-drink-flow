@@ -1,4 +1,5 @@
--- Additive upgrade. No existing business records are updated or deleted here.
+-- Phase 1: additive and compatible with the currently published frontend.
+-- No existing business records are updated or deleted here.
 -- Existing accounts retain access; new accounts require explicit authorization.
 DO $$ BEGIN
   IF NOT EXISTS (SELECT 1 FROM auth.users) THEN
@@ -24,18 +25,7 @@ $$;
 REVOKE ALL ON FUNCTION public.is_app_member() FROM PUBLIC, anon;
 GRANT EXECUTE ON FUNCTION public.is_app_member() TO authenticated;
 
-DO $$
-DECLARE t text; p record;
-BEGIN
-  FOREACH t IN ARRAY ARRAY['products','customers','sales','sale_items','purchases',
-    'cash_flow','bills','purchase_batches','inventory_movements','app_settings'] LOOP
-    FOR p IN SELECT policyname FROM pg_policies WHERE schemaname = 'public' AND tablename = t LOOP
-      EXECUTE format('DROP POLICY %I ON public.%I', p.policyname, t);
-    END LOOP;
-    EXECUTE format('CREATE POLICY "Authorized app members" ON public.%I FOR ALL TO authenticated USING (public.is_app_member()) WITH CHECK (public.is_app_member())', t);
-  END LOOP;
-END;
-$$;
+-- Access policies are activated only after the new frontend is published.
 
 -- Exact batch allocation for new/edited sales. Legacy sales are not rewritten.
 CREATE TABLE public.sale_batch_consumptions (
@@ -49,7 +39,7 @@ ALTER TABLE public.sale_batch_consumptions ENABLE ROW LEVEL SECURITY;
 CREATE POLICY "Authorized app members" ON public.sale_batch_consumptions FOR ALL TO authenticated
   USING (public.is_app_member()) WITH CHECK (public.is_app_member());
 
-CREATE OR REPLACE FUNCTION public.fifo_consume_batches(p_product_id uuid, p_quantity integer, p_sale_id uuid)
+CREATE OR REPLACE FUNCTION public.consume_sale_batches_atomic(p_product_id uuid, p_quantity integer, p_sale_id uuid)
 RETURNS jsonb LANGUAGE plpgsql SECURITY DEFINER SET search_path = public, pg_temp AS $$
 DECLARE b record; n integer := p_quantity; q integer; cost numeric := 0; consumed jsonb := '[]'; stock integer;
 BEGIN
@@ -78,7 +68,7 @@ BEGIN
 END;
 $$;
 -- Only the complete sale transaction may call FIFO, never a browser directly.
-REVOKE ALL ON FUNCTION public.fifo_consume_batches(uuid,integer,uuid) FROM PUBLIC, anon, authenticated;
+REVOKE ALL ON FUNCTION public.consume_sale_batches_atomic(uuid,integer,uuid) FROM PUBLIC, anon, authenticated;
 
 CREATE FUNCTION public.restore_sale_batches(p_sale_id uuid) RETURNS void
 LANGUAGE plpgsql SECURITY DEFINER SET search_path = public, pg_temp AS $$
@@ -165,7 +155,7 @@ BEGIN
       qty:=(item->>'quantity')::integer;
       price:=round((item->>'unit_price')::numeric,2);
       IF qty IS NULL OR qty<=0 OR price IS NULL OR price<0 OR price::text IN ('NaN','Infinity','-Infinity') THEN RAISE EXCEPTION 'Quantidade ou preço inválido'; END IF;
-      fifo:=public.fifo_consume_batches(pid,qty,sid);
+      fifo:=public.consume_sale_batches_atomic(pid,qty,sid);
       cost:=(fifo->>'totalCost')::numeric;
       INSERT INTO public.sale_items(sale_id,product_id,quantity,unit_price,unit_cost,subtotal,profit)
         VALUES(sid,pid,qty,price,cost/qty,price*qty,price*qty-cost);
