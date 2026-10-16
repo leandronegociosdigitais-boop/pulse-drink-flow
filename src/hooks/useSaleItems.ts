@@ -1,5 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { fetchReceivedSales, fetchReceivedItems } from "@/lib/reportQueries";
+import { receivedBetween, netReceivedItems } from "@/lib/receivedSales";
 
 interface SaleItemWithProduct {
   id: string;
@@ -51,33 +53,15 @@ export function useProductSalesReport() {
   return useQuery({
     queryKey: ["product_sales_report"],
     queryFn: async () => {
-      // Buscar todos os itens de venda do mês atual
-      const startOfMonth = new Date();
-      startOfMonth.setDate(1);
-      startOfMonth.setHours(0, 0, 0, 0);
-
-      const { data: salesData, error: salesError } = await supabase
-        .from("sales")
-        .select("id")
-        .gte("created_at", startOfMonth.toISOString());
-
-      if (salesError) throw salesError;
-
-      const saleIds = salesData.map((s) => s.id);
+      const now = new Date();
+      const sales = receivedBetween(await fetchReceivedSales(), new Date(now.getFullYear(), now.getMonth(), 1), new Date(now.getFullYear(), now.getMonth() + 1, 1));
+      const saleIds = sales.map(s => s.id);
 
       if (saleIds.length === 0) {
         return [];
       }
 
-      const { data: itemsData, error: itemsError } = await supabase
-        .from("sale_items")
-        .select(`
-          *,
-          products:product_id (name, category)
-        `)
-        .in("sale_id", saleIds);
-
-      if (itemsError) throw itemsError;
+      const itemsData = netReceivedItems(sales, await fetchReceivedItems(saleIds));
 
       // Agrupar por produto
       const productMap = new Map<string, ProductSalesData>();

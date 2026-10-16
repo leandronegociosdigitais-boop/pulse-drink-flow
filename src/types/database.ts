@@ -27,6 +27,7 @@ export interface Sale {
   discount_amount?: number;
   payment_method: 'dinheiro' | 'pix' | 'credito' | 'debito';
   status: 'pago' | 'pendente';
+  paid_at?: string | null;
   created_at: string;
 }
 

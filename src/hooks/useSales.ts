@@ -3,6 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Sale, SaleItemInput, PaymentMethod } from "@/types/database";
 import { toast } from "@/hooks/use-toast";
 import { runOperation } from "@/lib/operations";
+import { readReportRows } from "@/lib/reportQueries";
 
 interface SaleItemWithProduct {
   id: string;
@@ -26,11 +27,10 @@ export function useSales() {
   return useQuery({
     queryKey: ["sales"],
     queryFn: async () => {
-      const { data, error } = await supabase
+      const data = await readReportRows((from, to) => supabase
         .from("sales")
         .select("*, customers:customer_id(name), sale_items(id, quantity, subtotal, products:product_id(name))")
-        .order("created_at", { ascending: false });
-      if (error) throw error;
+        .order("created_at", { ascending: false }).order("id").range(from, to));
       return data.map(sale => ({ ...sale,
         customer_name: sale.customers?.name ?? null,
         items_summary: sale.sale_items.map(item => ({ id: item.id, quantity: item.quantity,
@@ -157,6 +157,8 @@ export function useCreateSale() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["sales"] });
       queryClient.invalidateQueries({ queryKey: ["monthly_report"] });
+      queryClient.invalidateQueries({ queryKey: ["received_sales"] });
+      queryClient.invalidateQueries({ queryKey: ["product_sales_report"] });
       queryClient.invalidateQueries({ queryKey: ["products"] });
       queryClient.invalidateQueries({ queryKey: ["cash_flow"] });
       queryClient.invalidateQueries({ queryKey: ["purchase_batches"] });
@@ -177,6 +179,8 @@ export function useMarkSaleAsPaid() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["sales"] });
       queryClient.invalidateQueries({ queryKey: ["monthly_report"] });
+      queryClient.invalidateQueries({ queryKey: ["received_sales"] });
+      queryClient.invalidateQueries({ queryKey: ["product_sales_report"] });
       queryClient.invalidateQueries({ queryKey: ["cash_flow"] });
       toast({ title: "Venda marcada como paga!" });
     },

@@ -124,3 +124,19 @@ pagamento individual de parcela, geração de meses seguintes e rollback de toda
 a compra/conta se qualquer parcela falhar. O roteiro de integração cobre 27
 verificações de banco, com dados fictícios. Há também uma verificação adicional
 de compatibilidade do frontend anterior durante a fase de preparação (28 no total).
+
+## Indicadores por recebimento
+
+- Dashboard, meta diária, gráficos e relatórios de vendas/lucro contam somente
+  vendas pagas, na data da entrada vinculada no caixa (ou `paid_at`). Vendas antigas
+  sem `paid_at` usam o recebimento histórico, sem reescrever o registro original.
+- Pendências continuam no histórico de vendas e em A Receber; seu lucro é
+  identificado como previsto. O saldo projetado continua separado do caixa recebido.
+- Produtos nos relatórios seguem o mesmo período de recebimento. Descontos e
+  centavos são distribuídos entre os itens para fechar com os totais líquidos.
+- Consultas financeiras paginadas evitam totais incompletos acima do limite da API.
+- Não há migração ou atualização de registros: a baixa de estoque continua na
+  criação da venda, e a entrada de caixa somente na confirmação do pagamento.
+- Validação: 46 testes do aplicativo e 31 verificações locais de transações,
+  incluindo ausência de caixa em venda pendente e nenhuma nova baixa de estoque
+  ao receber o pagamento.

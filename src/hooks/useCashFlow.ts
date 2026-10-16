@@ -2,17 +2,16 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { CashFlow } from "@/types/database";
 import { toast } from "@/hooks/use-toast";
+import { readReportRows } from "@/lib/reportQueries";
 
 export function useCashFlow() {
   return useQuery({
     queryKey: ["cash_flow"],
     queryFn: async () => {
-      const { data, error } = await supabase
+      const data = await readReportRows((from, to) => supabase
         .from("cash_flow")
         .select("*")
-        .order("created_at", { ascending: false });
-      
-      if (error) throw error;
+        .order("created_at", { ascending: false }).order("id").range(from, to));
       return data as CashFlow[];
     },
   });
@@ -22,11 +21,9 @@ export function useCashBalance() {
   return useQuery({
     queryKey: ["cash_flow", "balance"],
     queryFn: async () => {
-      const { data, error } = await supabase
+      const data = await readReportRows((from, to) => supabase
         .from("cash_flow")
-        .select("type, amount");
-      
-      if (error) throw error;
+        .select("type, amount").order("id").range(from, to));
       
       const entries = data as { type: string; amount: number }[];
       const balance = entries.reduce((acc, entry) => {

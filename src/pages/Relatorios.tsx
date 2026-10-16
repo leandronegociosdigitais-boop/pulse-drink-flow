@@ -6,7 +6,8 @@ import { PageHeader } from "@/components/layout/PageHeader";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { useSales, useMonthSales } from "@/hooks/useSales";
+import { useReceivedSales } from "@/hooks/useReceivedSales";
+import { receivedBetween } from "@/lib/receivedSales";
 import { useProducts } from "@/hooks/useProducts";
 import { useCashFlow } from "@/hooks/useCashFlow";
 import { useBills } from "@/hooks/useBills";
@@ -27,8 +28,7 @@ const COLORS = ["hsl(150, 100%, 50%)", "hsl(200, 100%, 50%)", "hsl(280, 100%, 50
 
 export default function Relatorios() {
   const navigate = useNavigate();
-  const { data: allSales = [] } = useSales();
-  const { data: monthSales = [] } = useMonthSales();
+  const { data: receivedSales = [], isError: receiptsError } = useReceivedSales();
   const { data: products = [] } = useProducts();
   const { data: cashFlow = [] } = useCashFlow();
   const { data: bills = [] } = useBills();
@@ -37,9 +37,10 @@ export default function Relatorios() {
 
   // Mensal: estado de mês/ano selecionados (padrão: mês atual)
   const today = new Date();
+  const monthSales = receivedBetween(receivedSales, new Date(today.getFullYear(), today.getMonth(), 1), new Date(today.getFullYear(), today.getMonth() + 1, 1));
   const [selectedYear, setSelectedYear] = useState(today.getFullYear());
   const [selectedMonth, setSelectedMonth] = useState(today.getMonth());
-  const { data: monthlyReport, isLoading: monthlyLoading } = useMonthlyReport(
+  const { data: monthlyReport, isLoading: monthlyLoading, isError: monthlyError } = useMonthlyReport(
     selectedYear,
     selectedMonth
   );
@@ -106,6 +107,8 @@ export default function Relatorios() {
       />
 
       <div className="p-4 pb-24">
+        <p className="text-xs text-muted-foreground mb-3">Vendas e lucro consideram somente valores recebidos, na data do pagamento.</p>
+        {receiptsError && <p role="alert" className="text-sm text-destructive">Não foi possível carregar os recebimentos. Tente atualizar a página.</p>}
         <Tabs defaultValue="mensal" className="w-full">
           <TabsList className="w-full grid grid-cols-6 h-auto mb-2">
             <TabsTrigger value="mensal" className="flex flex-col items-center gap-1 text-[10px] py-2 px-1">
@@ -160,14 +163,16 @@ export default function Relatorios() {
               </CardContent>
             </Card>
 
-            {monthlyLoading || !monthlyReport ? (
+            {monthlyError ? (
+              <p role="alert" className="text-sm text-destructive">Não foi possível carregar o relatório mensal. Tente atualizar a página.</p>
+            ) : monthlyLoading || !monthlyReport ? (
               <div className="text-center py-8 text-muted-foreground">Carregando...</div>
             ) : (
               <>
                 <div className="grid grid-cols-2 gap-3">
                   <Card className="border-primary/30 bg-primary/5">
                     <CardContent className="p-3 text-center">
-                      <p className="text-xs text-muted-foreground">Total Vendido</p>
+                      <p className="text-xs text-muted-foreground">Total Recebido</p>
                       <p className="text-lg font-bold text-primary">
                         {formatCurrency(monthlyReport.totalSold)}
                       </p>
@@ -175,7 +180,7 @@ export default function Relatorios() {
                   </Card>
                   <Card className="border-primary/30 bg-primary/5">
                     <CardContent className="p-3 text-center">
-                      <p className="text-xs text-muted-foreground">Lucro do Mês</p>
+                      <p className="text-xs text-muted-foreground">Lucro Recebido no Mês</p>
                       <p className="text-lg font-bold text-primary">
                         {formatCurrency(monthlyReport.totalProfit)}
                       </p>
@@ -183,7 +188,7 @@ export default function Relatorios() {
                   </Card>
                   <Card>
                     <CardContent className="p-3 text-center">
-                      <p className="text-xs text-muted-foreground">Vendas</p>
+                      <p className="text-xs text-muted-foreground">Vendas Recebidas</p>
                       <p className="text-lg font-bold">{monthlyReport.totalSales}</p>
                     </CardContent>
                   </Card>
@@ -209,7 +214,7 @@ export default function Relatorios() {
                   <CardHeader className="pb-2">
                     <CardTitle className="text-sm flex items-center gap-2">
                       <Trophy className="w-4 h-4 text-primary" />
-                      Cervejas vendidas no mês
+                      Cervejas com pagamento recebido no mês
                     </CardTitle>
                   </CardHeader>
                   <CardContent className="space-y-2">
@@ -256,13 +261,13 @@ export default function Relatorios() {
             <div className="grid grid-cols-2 gap-3">
               <Card>
                 <CardContent className="p-3 text-center">
-                  <p className="text-xs text-muted-foreground">Total Vendido</p>
+                  <p className="text-xs text-muted-foreground">Total Recebido</p>
                   <p className="text-lg font-bold text-primary">{formatCurrency(totalSold)}</p>
                 </CardContent>
               </Card>
               <Card>
                 <CardContent className="p-3 text-center">
-                  <p className="text-xs text-muted-foreground">Qtd. Vendas</p>
+                  <p className="text-xs text-muted-foreground">Vendas Recebidas</p>
                   <p className="text-lg font-bold">{monthSales.length}</p>
                 </CardContent>
               </Card>
@@ -316,7 +321,7 @@ export default function Relatorios() {
             <div className="grid grid-cols-2 gap-3">
               <Card className="border-primary/30 bg-primary/5">
                 <CardContent className="p-3 text-center">
-                  <p className="text-xs text-muted-foreground">Lucro do Mês</p>
+                  <p className="text-xs text-muted-foreground">Lucro Recebido no Mês</p>
                   <p className="text-lg font-bold text-primary">{formatCurrency(totalProfit)}</p>
                 </CardContent>
               </Card>
@@ -332,7 +337,7 @@ export default function Relatorios() {
               <CardHeader className="pb-2">
                 <CardTitle className="text-sm flex items-center gap-2">
                   <Trophy className="w-4 h-4 text-primary" />
-                  Produtos Mais Vendidos no Mês
+                  Produtos com Pagamento Recebido no Mês
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-3">
@@ -390,7 +395,7 @@ export default function Relatorios() {
             <div className="grid grid-cols-2 gap-3">
               <Card className="border-primary/30 bg-primary/5">
                 <CardContent className="p-3 text-center">
-                  <p className="text-xs text-muted-foreground">Lucro Total</p>
+                  <p className="text-xs text-muted-foreground">Lucro Recebido no Mês</p>
                   <p className="text-lg font-bold text-primary text-glow">
                     {formatCurrency(totalProfit)}
                   </p>

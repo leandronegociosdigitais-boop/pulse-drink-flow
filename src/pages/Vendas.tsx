@@ -111,7 +111,7 @@ export default function Vendas() {
                         {format(new Date(sale.created_at), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}
                       </p>
                       <p className="text-xs text-primary mt-1">
-                        Lucro: {formatCurrency(sale.total_profit)}
+                        {sale.status === "pendente" ? "Lucro previsto" : "Lucro recebido"}: {formatCurrency(sale.total_profit)}
                       </p>
                       {(sale.discount_amount ?? 0) > 0 && (
                         <p className="text-xs text-muted-foreground">

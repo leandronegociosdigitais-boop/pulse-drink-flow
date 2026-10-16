@@ -9,7 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useCashFlow, useCashBalance, useAddCashEntry } from "@/hooks/useCashFlow";
 import { useBills, useMarkBillAsPaid, useDeleteBill, usePendingBills } from "@/hooks/useBills";
-import { format, isBefore, startOfToday, startOfMonth, isAfter, parseISO } from "date-fns";
+import { format, isBefore, startOfToday, startOfMonth, addMonths, parseISO } from "date-fns";
 import { ArrowDownCircle, ArrowUpCircle, AlertCircle, Check, Plus, DollarSign, Package, Clock, ChevronDown, Trash2 } from "lucide-react";
 import { useSales } from "@/hooks/useSales";
 import { supabase } from "@/integrations/supabase/client";
@@ -113,8 +113,10 @@ export default function Financeiro() {
   const monthStart = startOfMonth(today);
   const overdueBills = pendingBills.filter((b) => isBefore(parseISO(b.due_date), today));
 
-  const monthEntries = cashFlow.filter((c) => c.type === "entrada" && isAfter(new Date(c.created_at), monthStart));
-  const monthExits = cashFlow.filter((c) => c.type === "saida" && isAfter(new Date(c.created_at), monthStart));
+  const monthEnd = addMonths(monthStart, 1);
+  const monthFlow = cashFlow.filter(c => new Date(c.created_at) >= monthStart && new Date(c.created_at) < monthEnd);
+  const monthEntries = monthFlow.filter(c => c.type === "entrada");
+  const monthExits = monthFlow.filter(c => c.type === "saida");
 
   const totalEntries = monthEntries.reduce((acc, c) => acc + c.amount, 0);
   const totalExits = monthExits.reduce((acc, c) => acc + c.amount, 0);
