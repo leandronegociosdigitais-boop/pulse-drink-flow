@@ -8,7 +8,7 @@ import { createPin, hasPin, verifyPin } from "@/lib/pin";
 import { PinProvider } from "@/contexts/PinContext";
 import { PinGuard } from "@/components/PinGuard";
 
-beforeEach(() => { localStorage.clear(); vi.stubGlobal("crypto", webcrypto); signIn.mockReset(); });
+beforeEach(() => { localStorage.clear(); sessionStorage.clear(); vi.stubGlobal("crypto", webcrypto); signIn.mockReset(); });
 afterEach(() => { vi.restoreAllMocks(); vi.unstubAllGlobals(); });
 const app = () => render(<PinProvider><PinGuard><div data-testid="private-app">Vendas privadas</div></PinGuard></PinProvider>);
 
@@ -29,7 +29,7 @@ describe("desbloqueio por PIN", () => {
     now += 60001;
     await expect(verifyPin("test-user", "0123")).resolves.toBeUndefined();
   });
-  it("não monta as telas antes do PIN e volta a bloquear ao sair do aplicativo", async () => {
+  it("exige PIN inicialmente, mantém acesso ao recarregar e bloqueia após inatividade", async () => {
     await createPin("test-user", "0123");
     const view = app();
     expect(screen.queryByTestId("private-app")).not.toBeInTheDocument();
@@ -38,8 +38,12 @@ describe("desbloqueio por PIN", () => {
     await waitFor(() => expect(screen.getByTestId("private-app")).toBeInTheDocument());
     vi.spyOn(document, "visibilityState", "get").mockReturnValue("hidden");
     fireEvent(document, new Event("visibilitychange"));
-    await waitFor(() => expect(screen.queryByTestId("private-app")).not.toBeInTheDocument());
+    expect(screen.getByTestId("private-app")).toBeInTheDocument();
     view.unmount(); app();
+    expect(screen.getByTestId("private-app")).toBeInTheDocument();
+    const later = Date.now() + 15 * 60 * 1000;
+    vi.spyOn(Date, "now").mockReturnValue(later);
+    fireEvent(window, new Event("focus"));
     expect(screen.queryByTestId("private-app")).not.toBeInTheDocument();
   });
   it("só cadastra o PIN após confirmação dos quatro números", async () => {
