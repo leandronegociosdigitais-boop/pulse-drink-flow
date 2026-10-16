@@ -1,3 +1,4 @@
+import { availableSaleStock, originalSaleProduct } from "@/lib/saleEditing";
 import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { Plus, Minus, Trash2, ShoppingBag, Percent } from "lucide-react";
@@ -57,7 +58,7 @@ export default function EditarVenda() {
       .map((it) => {
         const product = products.find((p) => p.id === it.product_id);
         if (!product) return null;
-        return { product, quantity: it.quantity };
+        return { product: originalSaleProduct(product, it.unit_price), quantity: it.quantity };
       })
       .filter((x): x is SaleItemInput => x !== null);
 
@@ -90,8 +91,8 @@ export default function EditarVenda() {
 
   const totalAmount = subtotal - discountAmount;
 
-  // Compute available stock = current product stock + qty already reserved by THIS sale
-  // (because when editing, the original items are still consuming stock until save)
+  // Estoque disponível = estoque atual + qty reservada pelos itens ORIGINAIS da venda
+  // menos a qty dos itens que o usuário já removeu localmente
   const reservedByThisSale = (productId: string) => {
     if (!sale) return 0;
     return sale.items
@@ -100,11 +101,11 @@ export default function EditarVenda() {
   };
 
   const availableStock = (productId: string, baseStock: number) =>
-    baseStock + reservedByThisSale(productId);
+    availableSaleStock(baseStock, reservedByThisSale(productId));
 
   const addItem = (product: typeof products[0]) => {
     const max = availableStock(product.id, product.stock_quantity);
-    if (max === 0) {
+    if (max <= 0) {
       toast({ title: "Produto sem estoque!", variant: "destructive" });
       return;
     }
@@ -201,7 +202,7 @@ export default function EditarVenda() {
               return (
                 <Card
                   key={product.id}
-                  className={cn("cursor-pointer transition-all", max === 0 && "opacity-50")}
+                  className={cn("cursor-pointer transition-all", max <= 0 && "opacity-50")}
                   onClick={() => addItem(product)}
                 >
                   <CardContent className="p-3">
@@ -210,10 +211,10 @@ export default function EditarVenda() {
                       {formatCurrency(product.sale_price)}
                     </p>
                     <Badge
-                      variant={max === 0 ? "destructive" : "secondary"}
+                      variant={max <= 0 ? "destructive" : "secondary"}
                       className="text-xs mt-1"
                     >
-                      {max} un
+                      {Math.max(0, max - (items.find(i => i.product.id === product.id)?.quantity || 0))} un
                     </Badge>
                   </CardContent>
                 </Card>

@@ -1,26 +1,45 @@
+import { Suspense, lazy } from "react";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { AuthProvider } from "@/contexts/AuthContext";
+import { ProtectedRoute } from "@/components/ProtectedRoute";
 
-// Pages
-import Dashboard from "./pages/Dashboard";
-import Vendas from "./pages/Vendas";
-import NovaVenda from "./pages/NovaVenda";
-import VendaDetalhe from "./pages/VendaDetalhe";
-import EditarVenda from "./pages/EditarVenda";
-import Estoque from "./pages/Estoque";
-import NovoProduto from "./pages/NovoProduto";
-import ProdutoDetalhe from "./pages/ProdutoDetalhe";
-import Financeiro from "./pages/Financeiro";
-import NovaConta from "./pages/NovaConta";
-import NovaCompra from "./pages/NovaCompra";
-import HistoricoEstoque from "./pages/HistoricoEstoque";
-import Relatorios from "./pages/Relatorios";
-import Backup from "./pages/Backup";
-import Instalar from "./pages/Instalar";
-import NotFound from "./pages/NotFound";
+const Dashboard = lazy(() => import("./pages/Dashboard"));
+const Vendas = lazy(() => import("./pages/Vendas"));
+const NovaVenda = lazy(() => import("./pages/NovaVenda"));
+const VendaDetalhe = lazy(() => import("./pages/VendaDetalhe"));
+const EditarVenda = lazy(() => import("./pages/EditarVenda"));
+const Estoque = lazy(() => import("./pages/Estoque"));
+const NovoProduto = lazy(() => import("./pages/NovoProduto"));
+const ProdutoDetalhe = lazy(() => import("./pages/ProdutoDetalhe"));
+const Financeiro = lazy(() => import("./pages/Financeiro"));
+const NovaConta = lazy(() => import("./pages/NovaConta"));
+const NovaCompra = lazy(() => import("./pages/NovaCompra"));
+const HistoricoEstoque = lazy(() => import("./pages/HistoricoEstoque"));
+const Relatorios = lazy(() => import("./pages/Relatorios"));
+const Backup = lazy(() => import("./pages/Backup"));
+const Instalar = lazy(() => import("./pages/Instalar"));
+const Login = lazy(() => import("./pages/Login"));
+const NotFound = lazy(() => import("./pages/NotFound"));
+
+function PageLoader() {
+  return (
+    <div className="min-h-screen flex items-center justify-center">
+      <div className="animate-spin w-8 h-8 border-4 border-primary border-t-transparent rounded-full" />
+    </div>
+  );
+}
+
+function ProtectedSuspense({ children }: { children: React.ReactNode }) {
+  return (
+    <ProtectedRoute>
+      <Suspense fallback={<PageLoader />}>{children}</Suspense>
+    </ProtectedRoute>
+  );
+}
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -37,27 +56,29 @@ const App = () => (
     <TooltipProvider>
       <Toaster />
       <Sonner />
-      <BrowserRouter>
-        <Routes>
-          <Route path="/" element={<Dashboard />} />
-          <Route path="/vendas" element={<Vendas />} />
-          <Route path="/vendas/nova" element={<NovaVenda />} />
-          <Route path="/vendas/:id" element={<VendaDetalhe />} />
-          <Route path="/vendas/:id/editar" element={<EditarVenda />} />
-          <Route path="/estoque" element={<Estoque />} />
-          <Route path="/estoque/novo" element={<NovoProduto />} />
-          <Route path="/estoque/:id" element={<ProdutoDetalhe />} />
-          <Route path="/estoque/compra" element={<NovaCompra />} />
-          <Route path="/estoque/historico" element={<HistoricoEstoque />} />
-          <Route path="/financeiro" element={<Financeiro />} />
-          <Route path="/financeiro/nova-conta" element={<NovaConta />} />
-          <Route path="/relatorios" element={<Relatorios />} />
-          <Route path="/backup" element={<Backup />} />
-          <Route path="/instalar" element={<Instalar />} />
-          {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
-          <Route path="*" element={<NotFound />} />
-        </Routes>
-      </BrowserRouter>
+      <AuthProvider>
+        <BrowserRouter>
+          <Routes>
+            <Route path="/login" element={<Suspense fallback={<PageLoader />}><Login /></Suspense>} />
+            <Route path="/" element={<ProtectedSuspense><Dashboard /></ProtectedSuspense>} />
+            <Route path="/vendas" element={<ProtectedSuspense><Vendas /></ProtectedSuspense>} />
+            <Route path="/vendas/nova" element={<ProtectedSuspense><NovaVenda /></ProtectedSuspense>} />
+            <Route path="/vendas/:id" element={<ProtectedSuspense><VendaDetalhe /></ProtectedSuspense>} />
+            <Route path="/vendas/:id/editar" element={<ProtectedSuspense><EditarVenda /></ProtectedSuspense>} />
+            <Route path="/estoque" element={<ProtectedSuspense><Estoque /></ProtectedSuspense>} />
+            <Route path="/estoque/novo" element={<ProtectedSuspense><NovoProduto /></ProtectedSuspense>} />
+            <Route path="/estoque/:id" element={<ProtectedSuspense><ProdutoDetalhe /></ProtectedSuspense>} />
+            <Route path="/estoque/compra" element={<ProtectedSuspense><NovaCompra /></ProtectedSuspense>} />
+            <Route path="/estoque/historico" element={<ProtectedSuspense><HistoricoEstoque /></ProtectedSuspense>} />
+            <Route path="/financeiro" element={<ProtectedSuspense><Financeiro /></ProtectedSuspense>} />
+            <Route path="/financeiro/nova-conta" element={<ProtectedSuspense><NovaConta /></ProtectedSuspense>} />
+            <Route path="/relatorios" element={<ProtectedSuspense><Relatorios /></ProtectedSuspense>} />
+            <Route path="/backup" element={<ProtectedSuspense><Backup /></ProtectedSuspense>} />
+            <Route path="/instalar" element={<ProtectedSuspense><Instalar /></ProtectedSuspense>} />
+            <Route path="*" element={<Suspense fallback={<PageLoader />}><NotFound /></Suspense>} />
+          </Routes>
+        </BrowserRouter>
+      </AuthProvider>
     </TooltipProvider>
   </QueryClientProvider>
 );

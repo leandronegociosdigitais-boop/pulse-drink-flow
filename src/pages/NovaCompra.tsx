@@ -12,6 +12,9 @@ import { useProducts } from "@/hooks/useProducts";
 import { useCreatePurchase } from "@/hooks/usePurchases";
 import { PaymentMethod } from "@/types/database";
 import { toast } from "@/hooks/use-toast";
+import { InstallmentFields } from "@/components/InstallmentFields";
+import { buildInstallments } from "@/lib/installments";
+import { addDays, addMonths, format } from "date-fns";
 
 function formatCurrency(value: number) {
   return new Intl.NumberFormat("pt-BR", {
@@ -24,6 +27,8 @@ export default function NovaCompra() {
   const navigate = useNavigate();
   const { data: products = [] } = useProducts();
   const createPurchase = useCreatePurchase();
+  const [installmentCount, setInstallmentCount] = useState("1");
+  const [firstDueDate, setFirstDueDate] = useState(() => format(addMonths(new Date(), 1), "yyyy-MM-dd"));
   
   const [form, setForm] = useState({
     product_id: "",
@@ -33,9 +38,10 @@ export default function NovaCompra() {
     supplier: "",
   });
 
-  const quantity = parseInt(form.quantity) || 0;
-  const unitCost = parseFloat(form.unit_cost) || 0;
+  const quantity = Number(form.quantity) || 0;
+  const unitCost = Math.round((Number(form.unit_cost) + Number.EPSILON) * 100) / 100 || 0;
   const totalAmount = quantity * unitCost;
+  const isCredit = form.payment_method === "credito";
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -44,7 +50,7 @@ export default function NovaCompra() {
       toast({ title: "Selecione um produto", variant: "destructive" });
       return;
     }
-    if (quantity <= 0) {
+    if (!Number.isInteger(quantity) || quantity <= 0) {
       toast({ title: "Informe a quantidade", variant: "destructive" });
       return;
     }
@@ -53,15 +59,28 @@ export default function NovaCompra() {
       return;
     }
 
-    await createPurchase.mutateAsync({
+    if (isCredit) {
+      try {
+        buildInstallments(totalAmount, Number(installmentCount), firstDueDate);
+        if (firstDueDate <= format(new Date(), "yyyy-MM-dd")) throw new Error("O primeiro vencimento deve ser uma data futura.");
+      } catch (error) {
+        toast({ title: "Confira o parcelamento", description: (error as Error).message, variant: "destructive" });
+        return;
+      }
+    }
+
+    try { await createPurchase.mutateAsync({
       product_id: form.product_id,
       quantity,
       unit_cost: unitCost,
       payment_method: form.payment_method,
       supplier: form.supplier || undefined,
+      installment_count: isCredit ? Number(installmentCount) : undefined,
+      first_due_date: isCredit ? firstDueDate : undefined,
     });
 
-    navigate("/estoque");
+    navigate(isCredit ? "/financeiro?aba=contas" : "/estoque");
+    } catch { /* The mutation displays the error; keep the form for retry. */ }
   };
 
   return (
@@ -93,6 +112,9 @@ export default function NovaCompra() {
                 <Input
                   id="quantity"
                   type="number"
+                  min="1"
+                  step="1"
+                  required
                   placeholder="0"
                   value={form.quantity}
                   onChange={(e) => setForm({ ...form, quantity: e.target.value })}
@@ -104,6 +126,8 @@ export default function NovaCompra() {
                   id="unit_cost"
                   type="number"
                   step="0.01"
+                  min="0.01"
+                  required
                   placeholder="0,00"
                   value={form.unit_cost}
                   onChange={(e) => setForm({ ...form, unit_cost: e.target.value })}
@@ -145,7 +169,7 @@ export default function NovaCompra() {
                 </div>
                 <div className="flex items-center space-x-2">
                   <RadioGroupItem value="credito" id="credito" />
-                  <Label htmlFor="credito">Crédito</Label>
+                  <Label htmlFor="credito">Crédito a prazo</Label>
                 </div>
                 <div className="flex items-center space-x-2">
                   <RadioGroupItem value="debito" id="debito" />
@@ -153,6 +177,12 @@ export default function NovaCompra() {
                 </div>
               </RadioGroup>
             </div>
+            {isCredit && <div className="space-y-3">
+              <p className="text-sm text-muted-foreground">O produto entra no estoque agora. As parcelas ficam em Contas a Pagar e só saem do caixa quando você marcar cada uma como paga.</p>
+              <InstallmentFields total={totalAmount} count={installmentCount} firstDue={firstDueDate}
+                onCountChange={setInstallmentCount} onFirstDueChange={setFirstDueDate}
+                minDate={format(addDays(new Date(), 1), "yyyy-MM-dd")} />
+            </div>}
           </CardContent>
         </Card>
 

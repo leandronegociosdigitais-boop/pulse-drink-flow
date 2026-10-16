@@ -18,6 +18,8 @@ export interface Customer {
 }
 
 export interface Sale {
+  customer_name?: string | null;
+  items_summary?: { id: string; quantity: number; subtotal: number; product_name: string }[];
   id: string;
   customer_id: string | null;
   total_amount: number;
@@ -47,6 +49,7 @@ export interface Purchase {
   unit_cost: number;
   total_amount: number;
   payment_method: 'dinheiro' | 'pix' | 'cartao';
+  supplier?: string;
   created_at: string;
 }
 
@@ -98,7 +101,13 @@ export interface Bill {
   updated_at: string;
 }
 
-export type PaymentMethod = 'dinheiro' | 'pix' | 'credito' | 'debito';
+export type PaymentMethod = 'dinheiro' | 'pix' | 'credito' | 'debito' | 'cartao';
+
+export interface AppSetting {
+  key: string;
+  value: Record<string, unknown>;
+  updated_at: string;
+}
 
 export interface SaleItemInput {
   product: Product;

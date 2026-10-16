@@ -358,6 +358,7 @@ export type Database = {
           customer_id: string | null
           discount_amount: number
           id: string
+        paid_at: string | null
           payment_method: string
           status: string
           total_amount: number
@@ -368,6 +369,7 @@ export type Database = {
           customer_id?: string | null
           discount_amount?: number
           id?: string
+        paid_at?: string | null
           payment_method?: string
           status?: string
           total_amount?: number
@@ -378,6 +380,7 @@ export type Database = {
           customer_id?: string | null
           discount_amount?: number
           id?: string
+        paid_at?: string | null
           payment_method?: string
           status?: string
           total_amount?: number
@@ -398,10 +401,13 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      fifo_consume_batches: {
-        Args: { p_product_id: string; p_quantity: number; p_sale_id: string }
-        Returns: Json
-      }
+      is_app_member: { Args: Record<string, never>; Returns: boolean }
+      create_bill_plan: { Args: { p_payload: Json }; Returns: Json }
+      create_credit_purchase: { Args: { p_payload: Json }; Returns: Json }
+      app_operation: { Args: { p_payload: Json }; Returns: Json }
+      fifo_consume_batches: { Args: { p_product_id: string; p_quantity: number; p_sale_id: string }; Returns: Json }
+      export_app_backup: { Args: Record<string, never>; Returns: Json }
+      restore_app_backup: { Args: { p_backup: Json }; Returns: undefined }
     }
     Enums: {
       [_ in never]: never

@@ -117,9 +117,9 @@ export default function HistoricoEstoque() {
                   <div className="flex items-start justify-between gap-2">
                     <div className="flex items-start gap-2 flex-1 min-w-0">
                       {m.movement_type === "entrada" ? (
-                        <ArrowDownCircle className="w-5 h-5 text-emerald-500 shrink-0 mt-0.5" />
+                        <ArrowUpCircle className="w-5 h-5 text-emerald-500 shrink-0 mt-0.5" />
                       ) : (
-                        <ArrowUpCircle className="w-5 h-5 text-blue-500 shrink-0 mt-0.5" />
+                        <ArrowDownCircle className="w-5 h-5 text-blue-500 shrink-0 mt-0.5" />
                       )}
                       <div className="min-w-0">
                         <p className="font-medium text-sm truncate">

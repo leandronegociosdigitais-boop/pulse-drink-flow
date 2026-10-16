@@ -8,27 +8,9 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useSales, useMarkSaleAsPaid } from "@/hooks/useSales";
-import { useSaleItems } from "@/hooks/useSaleItems";
+
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
-
-function SaleItemsList({ saleId }: { saleId: string }) {
-  const { data: items = [], isLoading } = useSaleItems(saleId);
-  if (isLoading) return <p className="text-xs text-muted-foreground">Carregando itens...</p>;
-  if (items.length === 0) return <p className="text-xs text-muted-foreground">Sem itens</p>;
-  return (
-    <ul className="space-y-1">
-      {items.map((it) => (
-        <li key={it.id} className="text-xs flex justify-between gap-2">
-          <span className="truncate">{it.product_name} × {it.quantity}</span>
-          <span className="text-muted-foreground shrink-0">
-            {new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(it.subtotal)}
-          </span>
-        </li>
-      ))}
-    </ul>
-  );
-}
 
 function formatCurrency(value: number) {
   return new Intl.NumberFormat("pt-BR", {
@@ -101,7 +83,7 @@ export default function Vendas() {
         ) : filteredSales.length === 0 ? (
           <div className="text-center py-8 text-muted-foreground">
             <History className="w-12 h-12 mx-auto mb-2 opacity-50" />
-            <p>Nenhuma venda {filter !== "todas" ? filter.slice(0, -1) : "registrada"}</p>
+            <p>Nenhuma venda {filter === "pagas" ? "paga" : filter === "pendentes" ? "pendente" : "registrada"}</p>
             {filter === "todas" && (
               <Button className="mt-4" onClick={() => navigate("/vendas/nova")}>
                 Registrar primeira venda
@@ -167,9 +149,18 @@ export default function Vendas() {
                     </div>
                   </div>
 
+                  <div className="mt-3 pt-3 border-t border-border space-y-2">
+                    <ul className="space-y-1">
+                      {(sale.items_summary || []).map(item => <li key={item.id} className="text-xs flex justify-between gap-2">
+                        <span>{item.product_name} × {item.quantity}</span>
+                        <span className="text-muted-foreground shrink-0">{formatCurrency(item.subtotal)}</span>
+                      </li>)}
+                    </ul>
+                    <p className="text-sm text-muted-foreground">Cliente: <span className="text-foreground">{sale.customer_name || "Não informado"}</span></p>
+                  </div>
+
                   {isExpanded && (
                     <div className="mt-3 pt-3 border-t border-border space-y-2">
-                      <SaleItemsList saleId={sale.id} />
                       <Button
                         size="sm"
                         variant="link"

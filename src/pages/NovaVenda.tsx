@@ -58,7 +58,8 @@ export default function NovaVenda() {
 
   const totalAmount = subtotal - discountAmount;
 
-  const totalProfit = items.reduce((acc, item) => 
+  // Lucro estimado (custo real será calculado via FIFO no momento da venda)
+  const estimatedProfit = items.reduce((acc, item) =>
     acc + (item.product.sale_price - item.product.cost_price) * item.quantity, 0
   ) - discountAmount;
 
@@ -382,7 +383,7 @@ export default function NovaVenda() {
               </div>
               <div className="text-right">
                 <p className="text-xs text-muted-foreground">Lucro</p>
-                <p className="text-sm text-primary">{formatCurrency(totalProfit > 0 ? totalProfit : 0)}</p>
+                <p className="text-sm text-primary">{formatCurrency(estimatedProfit > 0 ? estimatedProfit : 0)}</p>
                 {isPending && (
                   <Badge variant="outline" className="mt-1 text-warning border-warning">
                     Pendente

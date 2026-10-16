@@ -2,7 +2,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Sale, SaleItemInput, PaymentMethod } from "@/types/database";
 import { toast } from "@/hooks/use-toast";
-import { consumeBatchesFIFO, restoreBatchesFromSale } from "./useFifoSale";
+import { runOperation } from "@/lib/operations";
 
 interface SaleItemWithProduct {
   id: string;
@@ -28,10 +28,39 @@ export function useSales() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("sales")
-        .select("*")
+        .select("*, customers:customer_id(name), sale_items(id, quantity, subtotal, products:product_id(name))")
         .order("created_at", { ascending: false });
       if (error) throw error;
-      return data as Sale[];
+      return data.map(sale => ({ ...sale,
+        customer_name: sale.customers?.name ?? null,
+        items_summary: sale.sale_items.map(item => ({ id: item.id, quantity: item.quantity,
+          subtotal: item.subtotal, product_name: item.products?.name ?? "Produto removido" })),
+      })) as Sale[];
+    },
+  });
+}
+
+const PAGE_SIZE = 20;
+
+export function useSalesPage(page: number, filter?: "pagas" | "pendentes") {
+  return useQuery({
+    queryKey: ["sales", "page", page, filter],
+    queryFn: async () => {
+      const from = page * PAGE_SIZE;
+      const to = from + PAGE_SIZE - 1;
+
+      let query = supabase
+        .from("sales")
+        .select("*", { count: "exact", head: false })
+        .order("created_at", { ascending: false })
+        .range(from, to);
+
+      if (filter === "pagas") query = query.eq("status", "pago");
+      if (filter === "pendentes") query = query.eq("status", "pendente");
+
+      const { data, error, count } = await query;
+      if (error) throw error;
+      return { data: data as Sale[], count: count ?? 0 };
     },
   });
 }
@@ -59,7 +88,7 @@ export function useSaleById(saleId: string) {
         total_amount: sale.total_amount,
         total_profit: sale.total_profit,
         discount_amount: sale.discount_amount,
-        payment_method: sale.payment_method as PaymentMethod,
+        payment_method: sale.payment_method as Sale["payment_method"],
         status: sale.status as "pago" | "pendente",
         created_at: sale.created_at,
         customer: sale.customers as { name: string } | null,
@@ -122,105 +151,12 @@ export function useCreateSale() {
 
   return useMutation({
     mutationFn: async ({ items, payment_method, customer_id, discount_amount = 0, status = "pago" }: CreateSaleInput) => {
-      // Create sale first to get the ID
-      const { data: sale, error: saleError } = await supabase
-        .from("sales")
-        .insert({
-          customer_id: customer_id || null,
-          total_amount: 0,
-          total_profit: 0,
-          payment_method,
-          discount_amount,
-          status,
-        })
-        .select()
-        .single();
-
-      if (saleError) throw saleError;
-
-      let totalAmount = 0;
-      let totalCost = 0;
-
-      // Process each item using FIFO batch consumption
-      const saleItems = [];
-      for (const item of items) {
-        const subtotal = item.product.sale_price * item.quantity;
-        
-        // Consume batches FIFO — this updates batches, stock, and creates movements
-        const { totalCost: itemCost } = await consumeBatchesFIFO(
-          item.product.id,
-          item.quantity,
-          sale.id
-        );
-
-        const unitCost = itemCost / item.quantity;
-        const profit = subtotal - itemCost;
-
-        saleItems.push({
-          sale_id: sale.id,
-          product_id: item.product.id,
-          quantity: item.quantity,
-          unit_price: item.product.sale_price,
-          unit_cost: unitCost,
-          subtotal,
-          profit,
-        });
-
-        totalAmount += subtotal;
-        totalCost += itemCost;
-      }
-
-      // Apply discount — distribute proportionally across items for accurate per-item profit
-
-      totalAmount -= discount_amount;
-
-      if (discount_amount > 0 && totalAmount + discount_amount > 0) {
-
-        const grossTotal = totalAmount + discount_amount;
-
-        for (const si of saleItems) {
-
-          const discountShare = (si.subtotal / grossTotal) * discount_amount;
-
-          si.profit = si.subtotal - discountShare - (si.unit_cost * si.quantity);
-
-        }
-
-      }
-
-      const totalProfit = Math.max(0, totalAmount - totalCost);
-
-
-      // Insert sale items
-      const { error: itemsError } = await supabase
-        .from("sale_items")
-        .insert(saleItems);
-      if (itemsError) throw itemsError;
-
-      // Update sale totals
-      const { error: updateError } = await supabase
-        .from("sales")
-        .update({ total_amount: totalAmount, total_profit: totalProfit })
-        .eq("id", sale.id);
-      if (updateError) throw updateError;
-
-      // Register cash flow only if paid
-      if (status === "pago") {
-        const { error: cfError } = await supabase.from("cash_flow").insert({
-          type: "entrada",
-          category: "venda",
-          description: `Venda #${sale.id.slice(0, 8)}`,
-          amount: totalAmount,
-          reference_id: sale.id,
-          reference_type: "sale",
-        });
-        if (cfError) console.error("Erro ao registrar entrada no caixa:", cfError);
-      }
-
-      return sale;
+      return runOperation<Sale>({ action: "create_sale", payment_method, customer_id: customer_id || null,
+        discount_amount, status, items: items.map(i => ({ product_id: i.product.id, quantity: i.quantity, unit_price: i.product.sale_price })) });
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["sales"] });
+      queryClient.invalidateQueries({ queryKey: ["monthly_report"] });
       queryClient.invalidateQueries({ queryKey: ["products"] });
       queryClient.invalidateQueries({ queryKey: ["cash_flow"] });
       queryClient.invalidateQueries({ queryKey: ["purchase_batches"] });
@@ -237,35 +173,10 @@ export function useMarkSaleAsPaid() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async (saleId: string) => {
-      const { data: sale, error: fetchError } = await supabase
-        .from("sales")
-        .select("*")
-        .eq("id", saleId)
-        .single();
-      if (fetchError) throw fetchError;
-      if (sale.status === "pago") throw new Error("Venda já está paga");
-
-      const { error: updateError } = await supabase
-        .from("sales")
-        .update({ status: "pago" })
-        .eq("id", saleId);
-      if (updateError) throw updateError;
-
-      const { error: cfPaidError } = await supabase.from("cash_flow").insert({
-        type: "entrada",
-        category: "venda",
-        description: `Venda #${saleId.slice(0, 8)} (pago)`,
-        amount: sale.total_amount,
-        reference_id: saleId,
-        reference_type: "sale",
-      });
-      if (cfPaidError) console.error("Erro ao registrar entrada no caixa (venda paga):", cfPaidError);
-
-      return sale;
-    },
+    mutationFn: async (saleId: string) => runOperation<Sale>({ action: "pay_sale", id: saleId }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["sales"] });
+      queryClient.invalidateQueries({ queryKey: ["monthly_report"] });
       queryClient.invalidateQueries({ queryKey: ["cash_flow"] });
       toast({ title: "Venda marcada como paga!" });
     },
@@ -292,99 +203,12 @@ export function useUpdatePendingSale() {
 
   return useMutation({
     mutationFn: async ({ saleId, items, payment_method, customer_id, discount_amount = 0 }: UpdatePendingSaleInput) => {
-      // 1. Verify sale is pending
-      const { data: sale, error: fetchError } = await supabase
-        .from("sales")
-        .select("*")
-        .eq("id", saleId)
-        .single();
-      if (fetchError) throw fetchError;
-      if (sale.status !== "pendente") {
-        throw new Error("Apenas vendas pendentes podem ser editadas");
-      }
-
-      // 2. Restore stock from previous items
-      await restoreBatchesFromSale(saleId);
-
-      // 3. Delete previous sale_items
-      const { error: deleteError } = await supabase
-        .from("sale_items")
-        .delete()
-        .eq("sale_id", saleId);
-      if (deleteError) throw deleteError;
-
-      // 4. Re-process new items via FIFO
-      let totalAmount = 0;
-      let totalCost = 0;
-      const newSaleItems = [];
-
-      for (const item of items) {
-        const subtotal = item.product.sale_price * item.quantity;
-        const { totalCost: itemCost } = await consumeBatchesFIFO(
-          item.product.id,
-          item.quantity,
-          saleId
-        );
-
-        const unitCost = itemCost / item.quantity;
-        const profit = subtotal - itemCost;
-
-        newSaleItems.push({
-          sale_id: saleId,
-          product_id: item.product.id,
-          quantity: item.quantity,
-          unit_price: item.product.sale_price,
-          unit_cost: unitCost,
-          subtotal,
-          profit,
-        });
-
-        totalAmount += subtotal;
-        totalCost += itemCost;
-      }
-
-      totalAmount -= discount_amount;
-
-      if (discount_amount > 0 && totalAmount + discount_amount > 0) {
-
-        const grossTotal = totalAmount + discount_amount;
-
-        for (const si of newSaleItems) {
-
-          const discountShare = (si.subtotal / grossTotal) * discount_amount;
-
-          si.profit = si.subtotal - discountShare - (si.unit_cost * si.quantity);
-
-        }
-
-      }
-
-      const totalProfit = Math.max(0, totalAmount - totalCost);
-
-
-      // 5. Insert new sale_items
-      const { error: itemsError } = await supabase
-        .from("sale_items")
-        .insert(newSaleItems);
-      if (itemsError) throw itemsError;
-
-      // 6. Update sale header
-      const { error: updateError } = await supabase
-        .from("sales")
-        .update({
-          customer_id: customer_id || null,
-          payment_method,
-          discount_amount,
-          total_amount: totalAmount,
-          total_profit: totalProfit,
-        })
-        .eq("id", saleId);
-      if (updateError) throw updateError;
-
-      return { ...sale, total_amount: totalAmount, total_profit: totalProfit };
+      return runOperation<Sale>({ action: "update_sale", id: saleId, payment_method, customer_id: customer_id || null,
+        discount_amount, items: items.map(i => ({ product_id: i.product.id, quantity: i.quantity, unit_price: i.product.sale_price })) });
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["sales"] });
+      queryClient.invalidateQueries({ queryKey: ["monthly_report"] });
       queryClient.invalidateQueries({ queryKey: ["products"] });
       queryClient.invalidateQueries({ queryKey: ["purchase_batches"] });
       queryClient.invalidateQueries({ queryKey: ["inventory_movements"] });
@@ -403,28 +227,10 @@ export function useDeletePendingSale() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async (saleId: string) => {
-      const { data: sale, error: fetchError } = await supabase
-        .from("sales")
-        .select("status")
-        .eq("id", saleId)
-        .single();
-      if (fetchError) throw fetchError;
-      if (sale.status !== "pendente") {
-        throw new Error("Apenas vendas pendentes podem ser excluídas");
-      }
-
-      await restoreBatchesFromSale(saleId);
-
-      await supabase.from("sale_items").delete().eq("sale_id", saleId);
-      const { error: deleteError } = await supabase
-        .from("sales")
-        .delete()
-        .eq("id", saleId);
-      if (deleteError) throw deleteError;
-    },
+    mutationFn: async (saleId: string) => runOperation({ action: "delete_sale", id: saleId }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["sales"] });
+      queryClient.invalidateQueries({ queryKey: ["monthly_report"] });
       queryClient.invalidateQueries({ queryKey: ["products"] });
       queryClient.invalidateQueries({ queryKey: ["purchase_batches"] });
       queryClient.invalidateQueries({ queryKey: ["inventory_movements"] });
