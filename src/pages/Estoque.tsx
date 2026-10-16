@@ -31,7 +31,7 @@ export default function Estoque() {
     if (stockFilter === "zerados") return p.stock_quantity <= 0;
     if (stockFilter === "criticos") return p.stock_quantity <= p.min_stock;
     return true;
-  });
+  }).sort((a, b) => b.stock_quantity - a.stock_quantity || a.name.localeCompare(b.name, "pt-BR"));
 
   const zeroCount = products.filter((p) => p.stock_quantity <= 0).length;
   const criticalCount = products.filter((p) => p.stock_quantity <= p.min_stock).length;

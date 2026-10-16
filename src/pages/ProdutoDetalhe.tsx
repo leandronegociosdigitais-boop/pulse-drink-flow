@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { ArrowLeft, Save, Trash2, Plus, Minus } from "lucide-react";
 import { AppLayout } from "@/components/layout/AppLayout";
@@ -45,16 +45,17 @@ export default function ProdutoDetalhe() {
   const [stockAdjustment, setStockAdjustment] = useState(0);
   const [initialized, setInitialized] = useState(false);
 
-  // Initialize form when product loads
-  if (product && !initialized) {
-    setName(product.name);
-    setCategory(product.category);
-    setCostPrice(product.cost_price.toString());
-    setSalePrice(product.sale_price.toString());
-    setStockQuantity(product.stock_quantity);
-    setMinStock(product.min_stock.toString());
-    setInitialized(true);
-  }
+  useEffect(() => {
+    if (product && !initialized) {
+      setName(product.name);
+      setCategory(product.category);
+      setCostPrice(product.cost_price.toString());
+      setSalePrice(product.sale_price.toString());
+      setStockQuantity(product.stock_quantity);
+      setMinStock(product.min_stock.toString());
+      setInitialized(true);
+    }
+  }, [product, initialized]);
 
   const handleSave = async () => {
     if (!id || !name.trim()) return;

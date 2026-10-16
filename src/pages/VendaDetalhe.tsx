@@ -178,9 +178,13 @@ export default function VendaDetalhe() {
           <div className="space-y-2">
             <Button
               className="w-full glow-neon"
-              onClick={() => {
-                markAsPaid.mutate(sale.id);
-                navigate("/vendas");
+              onClick={async () => {
+                try {
+                  await markAsPaid.mutateAsync(sale.id);
+                  navigate("/vendas");
+                } catch {
+                  // Toast de erro já tratado no onError da mutation
+                }
               }}
               disabled={markAsPaid.isPending}
             >

@@ -8,68 +8,23 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Input } from "@/components/ui/input";
 import { toast } from "@/hooks/use-toast";
-import { supabase } from "@/integrations/supabase/client";
+import { backupSchema, downloadBackup, exportBackup, restoreBackup } from "@/lib/backup";
+import { useQueryClient } from "@tanstack/react-query";
 import { format } from "date-fns";
 
-interface BackupData {
-  version: string;
-  created_at: string;
-  products: Record<string, unknown>[];
-  customers: Record<string, unknown>[];
-  sales: Record<string, unknown>[];
-  sale_items: Record<string, unknown>[];
-  purchases: Record<string, unknown>[];
-  purchase_batches: Record<string, unknown>[];
-  inventory_movements: Record<string, unknown>[];
-  bills: Record<string, unknown>[];
-  cash_flow: Record<string, unknown>[];
-}
+
 
 export default function Backup() {
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const [isExporting, setIsExporting] = useState(false);
   const [isImporting, setIsImporting] = useState(false);
 
   const handleExport = async () => {
     setIsExporting(true);
     try {
-      // Buscar todos os dados (incluindo purchase_batches e inventory_movements para FIFO)
-      const [products, customers, sales, saleItems, purchases, purchaseBatches, inventoryMovements, bills, cashFlow] = await Promise.all([
-        supabase.from("products").select("*"),
-        supabase.from("customers").select("*"),
-        supabase.from("sales").select("*"),
-        supabase.from("sale_items").select("*"),
-        supabase.from("purchases").select("*"),
-        supabase.from("purchase_batches").select("*"),
-        supabase.from("inventory_movements").select("*"),
-        supabase.from("bills").select("*"),
-        supabase.from("cash_flow").select("*"),
-      ]);
-
-      const backup: BackupData = {
-        version: "1.1",
-        created_at: new Date().toISOString(),
-        products: products.data || [],
-        customers: customers.data || [],
-        sales: sales.data || [],
-        sale_items: saleItems.data || [],
-        purchases: purchases.data || [],
-        purchase_batches: purchaseBatches.data || [],
-        inventory_movements: inventoryMovements.data || [],
-        bills: bills.data || [],
-        cash_flow: cashFlow.data || [],
-      };
-
-      // Criar arquivo para download
-      const blob = new Blob([JSON.stringify(backup, null, 2)], { type: "application/json" });
-      const url = URL.createObjectURL(blob);
-      const link = document.createElement("a");
-      link.href = url;
-      link.download = `backup-${format(new Date(), "yyyy-MM-dd-HHmmss")}.json`;
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      URL.revokeObjectURL(url);
+      const backup = await exportBackup();
+      downloadBackup(backup, `backup-${format(new Date(), "yyyy-MM-dd-HHmmss")}.json`);
 
       toast({ title: "Backup exportado com sucesso!" });
     } catch (error) {
@@ -86,52 +41,12 @@ export default function Backup() {
 
     setIsImporting(true);
     try {
-      const text = await file.text();
-      const backup: BackupData = JSON.parse(text);
-
-      if (!backup.version || !backup.created_at) {
-        throw new Error("Arquivo de backup inválido");
-      }
-
-      // Limpar dados existentes (na ordem correta por causa das foreign keys)
-      await supabase.from("inventory_movements").delete().neq("id", "00000000-0000-0000-0000-000000000000");
-      await supabase.from("sale_items").delete().neq("id", "00000000-0000-0000-0000-000000000000");
-      await supabase.from("sales").delete().neq("id", "00000000-0000-0000-0000-000000000000");
-      await supabase.from("purchase_batches").delete().neq("id", "00000000-0000-0000-0000-000000000000");
-      await supabase.from("purchases").delete().neq("id", "00000000-0000-0000-0000-000000000000");
-      await supabase.from("cash_flow").delete().neq("id", "00000000-0000-0000-0000-000000000000");
-      await supabase.from("bills").delete().neq("id", "00000000-0000-0000-0000-000000000000");
-      await supabase.from("customers").delete().neq("id", "00000000-0000-0000-0000-000000000000");
-      await supabase.from("products").delete().neq("id", "00000000-0000-0000-0000-000000000000");
-
-      // Importar dados (na ordem correta) usando type assertions
-      if (backup.products.length > 0) {
-        await supabase.from("products").insert(backup.products as never[]);
-      }
-      if (backup.customers.length > 0) {
-        await supabase.from("customers").insert(backup.customers as never[]);
-      }
-      if (backup.bills.length > 0) {
-        await supabase.from("bills").insert(backup.bills as never[]);
-      }
-      if (backup.purchase_batches && backup.purchase_batches.length > 0) {
-        await supabase.from("purchase_batches").insert(backup.purchase_batches as never[]);
-      }
-      if (backup.sales.length > 0) {
-        await supabase.from("sales").insert(backup.sales as never[]);
-      }
-      if (backup.sale_items.length > 0) {
-        await supabase.from("sale_items").insert(backup.sale_items as never[]);
-      }
-      if (backup.purchases.length > 0) {
-        await supabase.from("purchases").insert(backup.purchases as never[]);
-      }
-      if (backup.inventory_movements && backup.inventory_movements.length > 0) {
-        await supabase.from("inventory_movements").insert(backup.inventory_movements as never[]);
-      }
-      if (backup.cash_flow.length > 0) {
-        await supabase.from("cash_flow").insert(backup.cash_flow as never[]);
-      }
+      const backup = backupSchema.parse(JSON.parse(await file.text()));
+      if (!confirm("Substituir os dados atuais por este backup? Uma cópia de segurança dos dados atuais será baixada antes da restauração.")) return;
+      const current = await exportBackup();
+      downloadBackup(current, `antes-restauracao-${format(new Date(), "yyyy-MM-dd-HHmmss")}.json`);
+      await restoreBackup(backup);
+      queryClient.removeQueries();
 
       toast({ title: "Backup restaurado com sucesso!" });
       navigate("/");
@@ -158,16 +73,13 @@ export default function Backup() {
 
     setIsImporting(true);
     try {
-      // Limpar dados existentes (na ordem correta por causa das foreign keys)
-      await supabase.from("inventory_movements").delete().neq("id", "00000000-0000-0000-0000-000000000000");
-      await supabase.from("sale_items").delete().neq("id", "00000000-0000-0000-0000-000000000000");
-      await supabase.from("sales").delete().neq("id", "00000000-0000-0000-0000-000000000000");
-      await supabase.from("purchase_batches").delete().neq("id", "00000000-0000-0000-0000-000000000000");
-      await supabase.from("purchases").delete().neq("id", "00000000-0000-0000-0000-000000000000");
-      await supabase.from("cash_flow").delete().neq("id", "00000000-0000-0000-0000-000000000000");
-      await supabase.from("bills").delete().neq("id", "00000000-0000-0000-0000-000000000000");
-      await supabase.from("customers").delete().neq("id", "00000000-0000-0000-0000-000000000000");
-      await supabase.from("products").delete().neq("id", "00000000-0000-0000-0000-000000000000");
+      const current = await exportBackup();
+      downloadBackup(current, `antes-limpeza-${format(new Date(), "yyyy-MM-dd-HHmmss")}.json`);
+      await restoreBackup({ version: "1.2", created_at: new Date().toISOString(),
+        products: [], customers: [], sales: [], sale_items: [], purchases: [], purchase_batches: [],
+        inventory_movements: [], bills: [], cash_flow: [], sale_batch_consumptions: [],
+        app_settings: current.app_settings || [], });
+      queryClient.removeQueries();
 
       toast({ title: "Dados limpos com sucesso!" });
       navigate("/");
@@ -207,7 +119,7 @@ export default function Backup() {
           <CardContent>
             <Button 
               onClick={handleExport} 
-              disabled={isExporting}
+              disabled={isExporting || isImporting}
               className="w-full"
             >
               {isExporting ? "Exportando..." : "Exportar Dados"}
@@ -238,7 +150,7 @@ export default function Backup() {
                 type="file"
                 accept=".json"
                 onChange={handleImport}
-                disabled={isImporting}
+                disabled={isImporting || isExporting}
                 className="cursor-pointer"
               />
             </div>
@@ -265,7 +177,7 @@ export default function Backup() {
             <Button 
               variant="destructive" 
               onClick={handleClearAll}
-              disabled={isImporting}
+              disabled={isImporting || isExporting}
               className="w-full"
             >
               Apagar Todos os Dados

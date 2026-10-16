@@ -9,14 +9,14 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useCashFlow, useCashBalance, useAddCashEntry } from "@/hooks/useCashFlow";
 import { useBills, useMarkBillAsPaid, useDeleteBill, usePendingBills } from "@/hooks/useBills";
-import { format, isBefore, startOfToday, startOfMonth, isAfter } from "date-fns";
+import { format, isBefore, startOfToday, startOfMonth, isAfter, parseISO } from "date-fns";
 import { ArrowDownCircle, ArrowUpCircle, AlertCircle, Check, Plus, DollarSign, Package, Clock, ChevronDown, Trash2 } from "lucide-react";
 import { useSales } from "@/hooks/useSales";
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery } from "@tanstack/react-query";
 import { useMemo } from "react";
 import { cn } from "@/lib/utils";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import {
   Dialog,
   DialogContent,
@@ -34,6 +34,7 @@ function formatCurrency(value: number) {
 
 export default function Financeiro() {
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
   const { data: cashFlow = [] } = useCashFlow();
   const { data: cashBalance = 0 } = useCashBalance();
   const { data: bills = [] } = useBills();
@@ -110,14 +111,13 @@ export default function Financeiro() {
 
   const today = startOfToday();
   const monthStart = startOfMonth(today);
-  const overdueBills = pendingBills.filter((b) => isBefore(new Date(b.due_date), today));
+  const overdueBills = pendingBills.filter((b) => isBefore(parseISO(b.due_date), today));
 
   const monthEntries = cashFlow.filter((c) => c.type === "entrada" && isAfter(new Date(c.created_at), monthStart));
   const monthExits = cashFlow.filter((c) => c.type === "saida" && isAfter(new Date(c.created_at), monthStart));
 
   const totalEntries = monthEntries.reduce((acc, c) => acc + c.amount, 0);
   const totalExits = monthExits.reduce((acc, c) => acc + c.amount, 0);
-
 
   const handleAddCash = async () => {
     const amount = parseFloat(cashAmount);
@@ -253,7 +253,8 @@ export default function Financeiro() {
           </Button>
         </div>
 
-        <Tabs defaultValue="fluxo" className="w-full">
+        <Tabs value={searchParams.get("aba") === "contas" ? "contas" : "fluxo"}
+          onValueChange={aba => setSearchParams({ aba }, { replace: true })} className="w-full">
           <TabsList className="w-full">
             <TabsTrigger value="fluxo" className="flex-1">Fluxo de Caixa</TabsTrigger>
             <TabsTrigger value="contas" className="flex-1">
@@ -340,7 +341,7 @@ export default function Financeiro() {
               </p>
             ) : (
               bills.map((bill) => {
-                const isOverdue = !bill.is_paid && isBefore(new Date(bill.due_date), today);
+                const isOverdue = !bill.is_paid && isBefore(parseISO(bill.due_date), today);
                 
                 return (
                   <Card key={bill.id} className={cn(
@@ -356,7 +357,7 @@ export default function Financeiro() {
                             )}
                           </div>
                           <p className="text-xs text-muted-foreground">
-                            Vence: {format(new Date(bill.due_date), "dd/MM/yyyy")}
+                            Vence: {format(parseISO(bill.due_date), "dd/MM/yyyy")}
                           </p>
                           <p className="font-bold mt-1">{formatCurrency(bill.amount)}</p>
                         </div>

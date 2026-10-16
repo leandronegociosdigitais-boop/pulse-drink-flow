@@ -1,3 +1,4 @@
+import { runOperation } from "@/lib/operations";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Bill } from "@/types/database";
@@ -10,7 +11,7 @@ export function useBills() {
       const { data, error } = await supabase
         .from("bills")
         .select("*")
-        .order("due_date");
+        .order("due_date", { ascending: false }).order("created_at", { ascending: false });
       
       if (error) throw error;
       return data as Bill[];
@@ -26,7 +27,7 @@ export function usePendingBills() {
         .from("bills")
         .select("*")
         .eq("is_paid", false)
-        .order("due_date");
+        .order("due_date", { ascending: false }).order("created_at", { ascending: false });
       
       if (error) throw error;
       return data as Bill[];
@@ -38,16 +39,9 @@ export function useCreateBill() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async (bill: Omit<Bill, "id" | "created_at" | "updated_at" | "is_paid" | "paid_at">) => {
-      const { data, error } = await supabase
-        .from("bills")
-        .insert(bill)
-        .select()
-        .single();
-      
-      if (error) throw error;
-      return data;
-    },
+    mutationFn: async (bill: { description: string; amount: number; due_date: string; installment_count?: number }) =>
+      runOperation<Bill[]>({ description: bill.description, total: bill.amount, first_due_date: bill.due_date,
+        installment_count: bill.installment_count ?? 1 }, "create_bill_plan"),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["bills"] });
       toast({ title: "Conta cadastrada com sucesso!" });
@@ -62,29 +56,7 @@ export function useMarkBillAsPaid() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async (id: string) => {
-      const { data, error } = await supabase
-        .from("bills")
-        .update({ is_paid: true, paid_at: new Date().toISOString() })
-        .eq("id", id)
-        .select()
-        .single();
-      
-      if (error) throw error;
-
-      // Registrar saída no caixa
-      const { error: cfError } = await supabase.from("cash_flow").insert({
-        type: "saida",
-        category: "conta",
-        description: `Pagamento: ${data.description}`,
-        amount: data.amount,
-        reference_id: id,
-        reference_type: "bill",
-      });
-      if (cfError) console.error("Erro ao registrar saída no caixa (conta paga):", cfError);
-
-      return data;
-    },
+    mutationFn: async (id: string) => runOperation({ action: "pay_bill", id }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["bills"] });
       queryClient.invalidateQueries({ queryKey: ["bills", "pending"] });

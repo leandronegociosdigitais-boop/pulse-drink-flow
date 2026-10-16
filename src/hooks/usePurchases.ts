@@ -1,3 +1,4 @@
+import { runOperation } from "@/lib/operations";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { PaymentMethod } from "@/types/database";
@@ -44,78 +45,25 @@ interface CreatePurchaseInput {
   unit_cost: number;
   payment_method: PaymentMethod;
   supplier?: string;
+  installment_count?: number;
+  first_due_date?: string;
 }
 
 export function useCreatePurchase() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async ({ product_id, quantity, unit_cost, payment_method, supplier }: CreatePurchaseInput) => {
-      const total_amount = quantity * unit_cost;
-
-      // 1. Criar compra (registro histórico)
-      const { data: purchase, error: purchaseError } = await supabase
-        .from("purchases")
-        .insert({ product_id, quantity, unit_cost, total_amount, payment_method })
-        .select()
-        .single();
-
-      if (purchaseError) throw purchaseError;
-
-      // 2. Criar lote PEPS (FIFO)
-      const { data: batch, error: batchError } = await supabase
-        .from("purchase_batches")
-        .insert({
-          product_id,
-          initial_quantity: quantity,
-          remaining_quantity: quantity,
-          purchase_price: unit_cost,
-          purchase_id: purchase.id,
-          supplier: supplier || null,
-        })
-        .select()
-        .single();
-
-      if (batchError) throw batchError;
-
-      // 3. Estoque é sincronizado automaticamente via trigger no banco
-      //    quando um novo lote é inserido. Apenas lemos o valor atualizado.
-      const { data: product } = await supabase
-        .from("products")
-        .select("stock_quantity")
-        .eq("id", product_id)
-        .single();
-
-      const newStock = product?.stock_quantity ?? quantity;
-
-      // 4. Registrar movimentação de estoque
-      const { error: mvError } = await supabase.from("inventory_movements").insert({
-        product_id,
-        batch_id: batch.id,
-        movement_type: "entrada",
-        quantity,
-        unit_price: unit_cost,
-        origin: "compra",
-        reference_id: purchase.id,
-        resulting_stock: newStock,
-      });
-      if (mvError) console.error("Erro ao registrar movimentação de estoque:", mvError);
-
-      // 5. Registrar saída no caixa
-      const { error: cfError } = await supabase.from("cash_flow").insert({
-        type: "saida",
-        category: "compra",
-        description: `Compra de estoque`,
-        amount: total_amount,
-        reference_id: purchase.id,
-        reference_type: "purchase",
-      });
-      if (cfError) console.error("Erro ao registrar saída no caixa:", cfError);
-
-      return purchase;
+    mutationFn: async ({ product_id, quantity, unit_cost, payment_method, supplier, installment_count, first_due_date }: CreatePurchaseInput) => {
+      if (payment_method === "credito" && (!installment_count || !first_due_date))
+        throw new Error("Informe as parcelas e o primeiro vencimento do cartão.");
+      return runOperation({ action: "create_purchase", product_id, quantity, unit_cost, payment_method,
+        supplier: supplier || null, installment_count: installment_count || 1, first_due_date: first_due_date || null },
+        payment_method === "credito" ? "create_credit_purchase" : "app_operation");
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["purchases"] });
+      queryClient.invalidateQueries({ queryKey: ["bills"] });
+      queryClient.invalidateQueries({ queryKey: ["monthly_report"] });
       queryClient.invalidateQueries({ queryKey: ["purchase_batches"] });
       queryClient.invalidateQueries({ queryKey: ["products"] });
       queryClient.invalidateQueries({ queryKey: ["cash_flow"] });
