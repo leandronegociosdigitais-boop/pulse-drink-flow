@@ -1,6 +1,6 @@
 # Acesso e manutenção — Pulse Drink Flow
 
-Referência de **16/10/2026** para continuar o trabalho no projeto correto.
+Referência atualizada em **19/10/2026** para continuar o trabalho no projeto correto.
 Não contém senhas, PINs, tokens ou dados de clientes.
 
 ## Identificação e acessos
@@ -45,7 +45,7 @@ para um projeto pessoal.
 | Entrega | Registro |
 | --- | --- |
 | Auditoria, seis ajustes funcionais, parcelamento, login, proteção e PIN inicial | [PR #5](https://github.com/petciabanhotosa-png/pulse-drink-flow/pull/5), integrado e publicado |
-| PIN após 15 minutos sem uso; recarga mantém desbloqueio | [PR #6](https://github.com/petciabanhotosa-png/pulse-drink-flow/pull/6), integrado e publicado |
+| PIN com prazo inicial de 15 minutos; regra substituída em 19/10 pela sessão aberta sem prazo | [PR #6](https://github.com/petciabanhotosa-png/pulse-drink-flow/pull/6), histórico da implantação inicial |
 | Indicadores e lucro pela data do recebimento, inclusive vendas antigas | [PR #7](https://github.com/petciabanhotosa-png/pulse-drink-flow/pull/7), integrado e publicado |
 
 Último commit de integração funcional confirmado:
@@ -85,8 +85,8 @@ Nenhuma contratação foi feita nesta entrega.
 ### PIN e acesso
 
 - PIN de quatro números, cadastrado por aparelho/navegador.
-- A recarga da mesma aba e uma breve ida ao segundo plano mantêm o desbloqueio;
-  após 15 minutos sem interação, o PIN é solicitado novamente.
+- Desde 19/10/2026, o desbloqueio dura durante a sessão aberta. Não há prazo de
+  inatividade; recarga, troca de aba e retorno do segundo plano mantêm o acesso.
 - Sair da conta remove o desbloqueio. Uma nova sessão/aba pode pedir o PIN.
 - O PIN é um bloqueio local da interface; os dados continuam protegidos pelo login
   Supabase e pelas políticas de membros no banco.

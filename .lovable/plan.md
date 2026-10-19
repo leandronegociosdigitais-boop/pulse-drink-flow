@@ -3,8 +3,9 @@
 
 > Plano inicial mantido como histórico. Para regras atuais, acessos e entregas
 > publicadas, consultar `README.md`, `AGENTS.md` e `ACESSO-E-MANUTENCAO.md` na raiz.
-> Vendas pendentes não geram caixa nem lucro recebido. O PIN bloqueia após 15
-> minutos sem uso. O alerta de estoque da tela inicial foi removido. Conferir o
+> Vendas pendentes não geram caixa nem lucro recebido. O PIN mantém o acesso
+> durante a sessão aberta, sem bloqueio por inatividade. O alerta de estoque
+> da tela inicial foi removido. Conferir o
 > comportamento atual antes de implementar novamente qualquer parte deste plano.
 
 Um Micro-SaaS mobile-first com design dark mode futurista e verde neon para gestão completa de vendas de bebidas.

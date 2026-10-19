@@ -18,12 +18,13 @@ e **Neon Ledger** no painel do Lovable.
 publicar ou trabalhar no banco. O guia explica os acessos, o estado da entrega,
 as regras de negócio e a manutenção com preservação dos dados.
 
-## Estado em 16/10/2026
+## Estado atualizado em 19/10/2026
 
 - Correções de integridade, seis ajustes, parcelamento, login e proteção do banco:
   [PR #5](https://github.com/petciabanhotosa-png/pulse-drink-flow/pull/5), integrado e publicado.
-- PIN mantém acesso ao atualizar a página e bloqueia após 15 minutos sem uso:
-  [PR #6](https://github.com/petciabanhotosa-png/pulse-drink-flow/pull/6), integrado e publicado.
+- PIN mantém acesso durante a sessão aberta, sem bloqueio por inatividade,
+  recarga ou troca de aba. Esta regra de 19/10 substitui o prazo de 15 minutos
+  instalado inicialmente pelo [PR #6](https://github.com/petciabanhotosa-png/pulse-drink-flow/pull/6).
 - Indicadores e lucro contam somente vendas pagas, na data do recebimento:
   [PR #7](https://github.com/petciabanhotosa-png/pulse-drink-flow/pull/7), integrado e publicado.
 - As quatro migrações de 16/10/2026 já foram aplicadas no banco de produção.

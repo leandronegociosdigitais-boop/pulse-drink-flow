@@ -54,7 +54,7 @@ export function PinGuard({ children }: { children: React.ReactNode }) {
         <LockKeyhole className="mx-auto h-10 w-10 text-primary mb-2" />
         <CardTitle>{mode === "recover" ? "Redefinir PIN" : configured ? "Desbloquear aplicativo" : "Cadastre seu PIN"}</CardTitle>
         <CardDescription>{mode === "recover" ? "Confirme a senha da conta para cadastrar um novo PIN." : configured
-          ? "Digite seu PIN de 4 números. O bloqueio é ativado após 15 minutos sem uso." : "Escolha 4 números para desbloquear neste aparelho após 15 minutos sem uso."}</CardDescription>
+          ? "Digite seu PIN de 4 números. O acesso permanece liberado nesta sessão, mesmo ao atualizar ou trocar de aba." : "Escolha 4 números para desbloquear neste aparelho ao iniciar uma nova sessão."}</CardDescription>
       </CardHeader>
       <CardContent>
         <form onSubmit={submit} className="space-y-4">
