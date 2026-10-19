@@ -33,6 +33,16 @@ as regras de negócio e a manutenção com preservação dos dados.
 
 Detalhes em [CORRECOES-2026-10-16.md](CORRECOES-2026-10-16.md).
 
+## Aplicativo instalado sem receber atualizações
+
+O topo da tela mostra a versão carregada e o botão **Atualizar app**. Para uma
+instalação antiga sem esse botão, abrir no mesmo aparelho:
+https://pulse-drink-flow.lovable.app/api/atualizar.html
+
+A recuperação exige internet, confirma a versão publicada e troca somente os
+arquivos offline do aplicativo. Login, PIN e dados comerciais não são apagados.
+Salvar formulários em andamento antes de atualizar. Não limpar os dados do site.
+
 ## Desenvolvimento local
 
 Stack: React 18, TypeScript, Vite, Tailwind, shadcn/ui, TanStack Query,
