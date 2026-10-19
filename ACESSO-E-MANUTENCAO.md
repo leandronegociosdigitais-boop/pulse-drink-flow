@@ -100,6 +100,26 @@ Nenhuma contratação foi feita nesta entrega.
 - O PIN usa PBKDF2 com salt, sem armazenamento em texto, e espera progressiva após
   erros. Redefinição exige confirmar a senha da mesma conta.
 
+## Recuperar uma instalação que mantém versão antiga
+
+O topo do aplicativo exibe a data/hora da versão no fuso de Manaus e um botão de
+atualização manual, mesmo antes do login/PIN. A versão online é consultada em
+`/app-version.json` com cache HTTP desativado e parâmetro único.
+
+Se a instalação não tiver esse controle, abrir no próprio aparelho:
+https://pulse-drink-flow.lovable.app/api/atualizar.html
+
+Essa página independente primeiro verifica a versão na rede; depois remove
+somente o service worker de escopo raiz e os caches `html-pages` e precache do
+app. Não mexe em localStorage, sessionStorage, cookies, IndexedDB ou banco.
+Assim, preserva login e PIN. Os arquivos offline são baixados novamente.
+Sem rede, mantém os arquivos existentes e permite tentar outra vez.
+
+O caminho `/api/` já estava excluído do fallback de navegação dos workers
+anteriores. Manter a recuperação fora do precache e não incluir `app-version.json`
+nos arquivos precacheados, para não consultar uma versão antiga em cache.
+Salvar formulários em andamento antes de atualizar.
+
 ## Banco — instalação já concluída
 
 As quatro migrações seguintes **já estão aplicadas em produção**:
@@ -167,7 +187,7 @@ npm run build
 npx tsc --noEmit -p tsconfig.app.json
 ```
 
-Última validação local da correção Android: **60 testes do aplicativo** aprovados; TypeScript e
+Última validação local do atualizador: **69 testes do aplicativo** aprovados; TypeScript e
 build aprovados; lint sem erros, com nove avisos existentes de Fast Refresh.
 Há **31 verificações** de transações locais em `scripts/verify-transactions.mjs`.
 O script depende de PGlite externo ao aplicativo: disponibilizar o pacote

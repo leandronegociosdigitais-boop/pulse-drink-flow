@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="theme-color" content="#0a0f14" />
+  <meta name="robots" content="noindex" />
+  <title>Atualizar Bebidas Manager</title>
+  <style>
+    *{box-sizing:border-box}body{margin:0;background:#0a0f14;color:#eef7f0;font:16px system-ui,sans-serif;min-height:100vh;display:grid;place-items:center;padding:24px}
+    main{width:100%;max-width:440px;padding:28px;border:1px solid #284337;border-radius:18px;background:#111b17}h1{font-size:24px;margin:0 0 16px}p{line-height:1.6;color:#b7c5bf}
+    button,a{display:block;width:100%;padding:14px;border-radius:10px;text-align:center;font:inherit}button{border:0;background:#00ef87;color:#052417;font-weight:700;cursor:pointer}button:disabled{opacity:.6;cursor:wait}a{color:#a8edcd;margin-top:12px}#status{min-height:48px;margin-bottom:0;font-size:14px}
+  </style>
+</head>
+<body>
+  <main>
+    <h1>Atualizar Bebidas Manager</h1>
+    <p>Baixe a versão mais recente neste aparelho. Seu login, PIN, vendas, estoque e financeiro serão preservados.</p>
+    <p>Salve qualquer formulário que estiver preenchendo antes de continuar. É necessária conexão com a internet.</p>
+    <button id="update" type="button">Atualizar aplicativo</button>
+    <a href="/">Voltar ao aplicativo</a>
+    <p id="status" role="status" aria-live="polite">Pronto para buscar a atualização.</p>
+  </main>
+  <script>
+    const button = document.getElementById('update');
+    const status = document.getElementById('status');
+    async function updateApp() {
+      button.disabled = true;
+      status.textContent = 'Conferindo a versão disponível…';
+      try {
+        // Verify the live deployment before changing any offline app files.
+        const response = await fetch('/app-version.json?check=' + Date.now(), { cache: 'no-store' });
+        if (!response.ok) throw new Error('Não foi possível buscar a versão. Confira a conexão e tente novamente.');
+        const version = await response.json();
+        if (typeof version.version !== 'string' || !/^\d+$/.test(version.version)) throw new Error('A atualização ainda está sendo publicada. Tente novamente em instantes.');
+        status.textContent = 'Atualizando os arquivos do aplicativo…';
+        if ('serviceWorker' in navigator) {
+          const registrations = await navigator.serviceWorker.getRegistrations();
+          await Promise.all(registrations.filter(registration => registration.scope === location.origin + '/').map(registration => registration.unregister()));
+        }
+        if ('caches' in window) {
+          const names = await caches.keys();
+          const scope = location.origin + '/';
+          await Promise.all(names.filter(name => name === 'html-pages' || (name.startsWith('workbox-precache-') && name.endsWith(scope))).map(name => caches.delete(name)));
+        }
+        // Deliberately do not touch localStorage, sessionStorage, cookies or IndexedDB.
+        status.textContent = 'Atualização concluída. Abrindo o aplicativo…';
+        location.replace('/?versao=' + encodeURIComponent(version.version));
+      } catch (error) {
+        status.textContent = error instanceof Error ? error.message : 'Não foi possível atualizar. Tente novamente.';
+        button.disabled = false;
+      }
+    }
+    button.addEventListener('click', updateApp);
+    if (new URLSearchParams(location.search).get('iniciar') === '1') updateApp();
+  </script>
+</body>
+</html>

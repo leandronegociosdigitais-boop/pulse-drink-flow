@@ -21,6 +21,9 @@
   inclusive após recarga e renovação do token. Não bloquear por inatividade ou
   troca de app. Sair da conta, novo login ou redefinir o PIN remove o desbloqueio.
 - O atualizador PWA fica na raiz do aplicativo, disponível antes do login/PIN.
+- Versão carregada visível no topo e app-version.json gerado pelo build.
+  A recuperação em /api/atualizar.html fica fora do precache/fallback do SPA;
+  remove só os arquivos offline do app, sem apagar armazenamento de login/PIN.
 - Nunca incluir credenciais, PINs ou backups no repositório público.
 - Validar o comportamento afetado e seguir GitHub → Lovable → publicação.
   Documentar mudanças de regras ou acessos no guia de manutenção.
