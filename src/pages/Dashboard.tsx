@@ -122,7 +122,7 @@ export default function Dashboard() {
         {receiptsError && <p role="alert" className="text-sm text-destructive">Não foi possível carregar os recebimentos. Tente atualizar a página.</p>}
 
         {/* KPIs */}
-        <div className="grid grid-cols-2 gap-3">
+        <div className="grid grid-cols-1 min-[360px]:grid-cols-2 gap-3">
           <KPICard
             title="Recebido Hoje"
             value={formatCurrency(todayTotal)}
