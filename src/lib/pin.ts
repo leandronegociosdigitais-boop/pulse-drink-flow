@@ -1,3 +1,5 @@
+import { clearPinUnlock } from "@/lib/pinSession";
+
 interface PinRecord { version: 1; salt: string; hash: string; failures: number; lockedUntil: number }
 const key = (userId: string) => `pulse-pin-v1:${userId}`;
 const hex = (bytes: Uint8Array) => Array.from(bytes, b => b.toString(16).padStart(2, "0")).join("");
@@ -16,6 +18,7 @@ export async function createPin(userId: string, pin: string) {
   const salt = hex(crypto.getRandomValues(new Uint8Array(16)));
   const record: PinRecord = { version: 1, salt, hash: await digest(pin, salt), failures: 0, lockedUntil: 0 };
   localStorage.setItem(key(userId), JSON.stringify(record));
+  clearPinUnlock(userId);
 }
 
 export async function verifyPin(userId: string, pin: string) {
@@ -38,4 +41,4 @@ export async function verifyPin(userId: string, pin: string) {
 }
 
 // Only call after a successful password reauthentication for this same user.
-export function removePin(userId: string) { localStorage.removeItem(key(userId)); }
+export function removePin(userId: string) { localStorage.removeItem(key(userId)); clearPinUnlock(userId); }

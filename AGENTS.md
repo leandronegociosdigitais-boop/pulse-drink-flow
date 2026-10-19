@@ -16,9 +16,11 @@
   e lucro usam a data do recebimento, também para vendas antigas.
 - Manter operações críticas atômicas; não substituir uma RPC com erro por
   gravações independentes que deixem a operação pela metade.
-- Desde 19/10/2026, o PIN é solicitado ao iniciar uma nova sessão. Não bloquear
-  por inatividade, recarga, troca de aba ou retorno do segundo plano enquanto
-  a sessão permanecer aberta. Sair da conta remove o desbloqueio.
+- No Android instalado, não depender apenas de sessionStorage: o sistema pode
+  recriar a janela. O desbloqueio acompanha o session_id do login no aparelho,
+  inclusive após recarga e renovação do token. Não bloquear por inatividade ou
+  troca de app. Sair da conta, novo login ou redefinir o PIN remove o desbloqueio.
+- O atualizador PWA fica na raiz do aplicativo, disponível antes do login/PIN.
 - Nunca incluir credenciais, PINs ou backups no repositório público.
 - Validar o comportamento afetado e seguir GitHub → Lovable → publicação.
   Documentar mudanças de regras ou acessos no guia de manutenção.

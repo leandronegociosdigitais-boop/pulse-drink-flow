@@ -7,6 +7,7 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
 import { PinProvider } from "@/contexts/PinContext";
+import { PWAUpdateBanner } from "@/components/PWAUpdateBanner";
 
 const Dashboard = lazy(() => import("./pages/Dashboard"));
 const Vendas = lazy(() => import("./pages/Vendas"));
@@ -57,6 +58,7 @@ const App = () => (
     <TooltipProvider>
       <Toaster />
       <Sonner />
+      <PWAUpdateBanner />
       <AuthProvider>
         <PinProvider>
         <BrowserRouter>

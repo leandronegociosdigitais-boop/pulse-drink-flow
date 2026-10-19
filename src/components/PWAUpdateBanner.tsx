@@ -10,8 +10,13 @@ export function PWAUpdateBanner() {
   const [updateSW, setUpdateSW] = useState<((reload?: boolean) => Promise<void>) | null>(null);
 
   useEffect(() => {
-    if (localStorage.getItem("bebidas-app-version") !== BUILD_VERSION) {
-      localStorage.setItem("bebidas-app-version", BUILD_VERSION);
+    const saveVersion = () => {
+      try { localStorage.setItem("bebidas-app-version", BUILD_VERSION); } catch { /* Updates still work when storage is unavailable. */ }
+    };
+    let storedVersion: string | null = null;
+    try { storedVersion = localStorage.getItem("bebidas-app-version"); } catch { /* Continue to register updates. */ }
+    if (storedVersion !== BUILD_VERSION) {
+      saveVersion();
       if (navigator.serviceWorker?.controller) {
         setNeedRefresh(true);
       }
@@ -35,29 +40,42 @@ export function PWAUpdateBanner() {
       return;
     }
 
+    let active = true;
+    let registration: ServiceWorkerRegistration | undefined;
+    let interval: ReturnType<typeof setInterval> | undefined;
+    const checkUpdate = () => {
+      if (document.visibilityState !== "hidden") registration?.update().catch(() => {});
+    };
     const update = registerSW({
       immediate: true,
       onNeedRefresh() {
-        setNeedRefresh(true);
+        if (active) setNeedRefresh(true);
       },
       onOfflineReady() {
-        localStorage.setItem("bebidas-app-version", BUILD_VERSION);
+        saveVersion();
       },
-      onRegisteredSW(_swUrl, registration) {
-        if (registration) {
-          setInterval(() => {
-            registration.update().catch(() => {});
-          }, 60_000);
+      onRegisteredSW(_swUrl, registered) {
+        if (active && registered) {
+          registration = registered;
+          interval = setInterval(checkUpdate, 60_000);
         }
       },
     });
     setUpdateSW(() => update);
+    window.addEventListener("focus", checkUpdate);
+    document.addEventListener("visibilitychange", checkUpdate);
+    return () => {
+      active = false;
+      clearInterval(interval);
+      window.removeEventListener("focus", checkUpdate);
+      document.removeEventListener("visibilitychange", checkUpdate);
+    };
   }, []);
 
   if (!needRefresh) return null;
 
   const handleUpdate = async () => {
-    localStorage.setItem("bebidas-app-version", BUILD_VERSION);
+    try { localStorage.setItem("bebidas-app-version", BUILD_VERSION); } catch { /* Updating does not require local storage. */ }
 
     if (updateSW) {
       await updateSW(true);

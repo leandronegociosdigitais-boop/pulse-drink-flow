@@ -1,10 +1,12 @@
 import { createContext, useContext, useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import type { User } from "@supabase/supabase-js";
+import type { Session, User } from "@supabase/supabase-js";
+import { clearPinUnlock, pinLoginId } from "@/lib/pinSession";
 
 interface AuthContextType {
   user: User | null;
   loading: boolean;
+  sessionId: string | null;
   signIn: (email: string, password: string) => Promise<string | null>;
   signUp: (email: string, password: string) => Promise<string | null>;
   signOut: () => Promise<void>;
@@ -13,20 +15,28 @@ interface AuthContextType {
 const AuthContext = createContext<AuthContextType>(null!);
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
-  const [user, setUser] = useState<User | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [{ user, sessionId, loading }, setAuth] = useState<{ user: User | null; sessionId: string | null; loading: boolean }>({ user: null, sessionId: null, loading: true });
 
   useEffect(() => {
+    let active = true;
+    let receivedAuthEvent = false;
+    let lastUserId: string | null = null;
+    const applySession = (session: Session | null) => {
+      if (!active) return;
+      lastUserId = session?.user.id ?? null;
+      setAuth({ user: session?.user ?? null, sessionId: pinLoginId(session), loading: false });
+    };
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      receivedAuthEvent = true;
+      if (event === "SIGNED_OUT" && lastUserId) clearPinUnlock(lastUserId);
+      applySession(session);
+    });
+    // A slower initial read must not overwrite a newer sign-in/token-refresh event.
     supabase.auth.getSession().then(({ data: { session } }) => {
-      setUser(session?.user ?? null);
-      setLoading(false);
-    });
+      if (!receivedAuthEvent) applySession(session);
+    }).catch(() => { if (!receivedAuthEvent) applySession(null); });
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      setUser(session?.user ?? null);
-    });
-
-    return () => subscription.unsubscribe();
+    return () => { active = false; subscription.unsubscribe(); };
   }, []);
 
   const signIn = async (email: string, password: string): Promise<string | null> => {
@@ -40,11 +50,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   const signOut = async () => {
-    await supabase.auth.signOut();
+    const { error } = await supabase.auth.signOut();
+    if (!error && user) clearPinUnlock(user.id);
   };
 
   return (
-    <AuthContext.Provider value={{ user, loading, signIn, signUp, signOut }}>
+    <AuthContext.Provider value={{ user, sessionId, loading, signIn, signUp, signOut }}>
       {children}
     </AuthContext.Provider>
   );
