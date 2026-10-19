@@ -11,6 +11,9 @@ export default defineConfig({
     include: ["src/**/*.{test,spec}.{ts,tsx}"],
   },
   resolve: {
-    alias: { "@": path.resolve(__dirname, "./src") },
+    alias: {
+      "@": path.resolve(__dirname, "./src"),
+      "virtual:pwa-register": path.resolve(__dirname, "./node_modules/vite-plugin-pwa/dist/client/dev/register.js"),
+    },
   },
 });

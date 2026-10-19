@@ -48,7 +48,7 @@ para um projeto pessoal.
 | PIN com prazo inicial de 15 minutos; regra substituída em 19/10 pela sessão aberta sem prazo | [PR #6](https://github.com/petciabanhotosa-png/pulse-drink-flow/pull/6), histórico da implantação inicial |
 | Indicadores e lucro pela data do recebimento, inclusive vendas antigas | [PR #7](https://github.com/petciabanhotosa-png/pulse-drink-flow/pull/7), integrado e publicado |
 
-Último commit de integração funcional confirmado:
+Commit de referência da entrega de indicadores em 16/10/2026:
 `d9e4032cd289246abd582f511ea6a963a4e84162`. É uma referência da entrega, não uma
 instrução para voltar o código a esse commit. Sempre conferir a `main` atual.
 
@@ -85,9 +85,16 @@ Nenhuma contratação foi feita nesta entrega.
 ### PIN e acesso
 
 - PIN de quatro números, cadastrado por aparelho/navegador.
-- Desde 19/10/2026, o desbloqueio dura durante a sessão aberta. Não há prazo de
-  inatividade; recarga, troca de aba e retorno do segundo plano mantêm o acesso.
-- Sair da conta remove o desbloqueio. Uma nova sessão/aba pode pedir o PIN.
+- O desbloqueio acompanha a sessão de login no aparelho, identificado pelo
+  `session_id` do Supabase. O registro local não contém tokens nem o PIN.
+- Não há prazo de inatividade: recarga, troca de app e recriação da janela pelo
+  Android mantêm o acesso enquanto o mesmo login estiver conectado. A renovação
+  do token não cria um login novo.
+- Sair da conta, iniciar outro login ou redefinir o PIN remove o desbloqueio.
+  Fechar apenas a janela pode manter o login no Android; usar **Sair da conta**
+  para bloquear explicitamente o aparelho.
+- O atualizador PWA aparece também na tela de login/PIN, sem depender do
+  desbloqueio para buscar a versão nova.
 - O PIN é um bloqueio local da interface; os dados continuam protegidos pelo login
   Supabase e pelas políticas de membros no banco.
 - O PIN usa PBKDF2 com salt, sem armazenamento em texto, e espera progressiva após
@@ -160,7 +167,7 @@ npm run build
 npx tsc --noEmit -p tsconfig.app.json
 ```
 
-Última entrega funcional: **46 testes do aplicativo** aprovados; TypeScript e
+Última validação local da correção Android: **60 testes do aplicativo** aprovados; TypeScript e
 build aprovados; lint sem erros, com nove avisos existentes de Fast Refresh.
 Há **31 verificações** de transações locais em `scripts/verify-transactions.mjs`.
 O script depende de PGlite externo ao aplicativo: disponibilizar o pacote
@@ -174,6 +181,7 @@ nem acessa produção.
 | `src/lib/receivedSales.ts` | Recebimentos e lucro líquido por produto |
 | `src/lib/reportQueries.ts` | Leituras paginadas dos relatórios |
 | `src/contexts/PinContext.tsx` | Sessão e inatividade do PIN |
+| `src/lib/pinSession.ts` | Desbloqueio no aparelho vinculado ao login, sem guardar tokens |
 | `src/lib/operations.ts` | Chamadas às operações atômicas |
 | `supabase/migrations` | Histórico SQL; conferir o servidor antes de aplicar |
 | `src/test` | Testes do aplicativo |

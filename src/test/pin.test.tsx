@@ -2,7 +2,7 @@ import { webcrypto } from "node:crypto";
 import { beforeEach, afterEach, describe, expect, it, vi } from "vitest";
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 const { signIn } = vi.hoisted(() => ({ signIn: vi.fn() }));
-vi.mock("@/contexts/AuthContext", () => ({ useAuth: () => ({ user: { id: "test-user", email: "test@example.com" }, signOut: vi.fn() }) }));
+vi.mock("@/contexts/AuthContext", () => ({ useAuth: () => ({ user: { id: "test-user", email: "test@example.com" }, sessionId: "login-test", loading: false, signOut: vi.fn() }) }));
 vi.mock("@/integrations/supabase/client", () => ({ supabase: { auth: { signInWithPassword: signIn } } }));
 import { createPin, hasPin, verifyPin } from "@/lib/pin";
 import { PinProvider } from "@/contexts/PinContext";

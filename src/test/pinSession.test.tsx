@@ -2,7 +2,7 @@ import { act, cleanup, fireEvent, render, screen } from "@testing-library/react"
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { PinProvider, usePinLock } from "@/contexts/PinContext";
 
-const auth = vi.hoisted(() => ({ user: { id: "user-a" } as { id: string } | null }));
+const auth = vi.hoisted(() => ({ user: { id: "user-a" } as { id: string } | null, sessionId: "login-a", loading: false }));
 vi.mock("@/contexts/AuthContext", () => ({ useAuth: () => auth }));
 function App() {
   const { unlockedFor, unlock } = usePinLock();
@@ -18,6 +18,8 @@ describe("PIN open browser session", () => {
     localStorage.clear();
     localStorage.setItem("pulse-pin-v1:user-a", "configured");
     auth.user = { id: "user-a" };
+    auth.sessionId = "login-a";
+    auth.loading = false;
   });
   afterEach(() => { cleanup(); vi.useRealTimers(); });
 
@@ -43,13 +45,13 @@ describe("PIN open browser session", () => {
     expect(screen.getByText("user-a")).toBeInTheDocument();
   });
 
-  it("requires PIN for a new browser session", () => {
+  it("restores the login unlock when Android recreates the window and loses sessionStorage", () => {
     const first = mount();
     fireEvent.click(screen.getByText("Unlock"));
     first.unmount();
     sessionStorage.clear();
     mount();
-    expect(screen.getByText("locked")).toBeInTheDocument();
+    expect(screen.getByText("user-a")).toBeInTheDocument();
     expect(sessionStorage.length).toBe(0);
   });
 
@@ -69,8 +71,40 @@ describe("PIN open browser session", () => {
     auth.user = null;
     view.rerender(<PinProvider><App /></PinProvider>);
     expect(sessionStorage.length).toBe(0);
+    expect(localStorage.getItem("pulse-pin-login-v2:user-a")).toBeNull();
     auth.user = { id: "user-b" };
     view.rerender(<PinProvider><App /></PinProvider>);
+    expect(screen.getByText("locked")).toBeInTheDocument();
+  });
+
+  it("requires PIN for a different login session even on the same account", () => {
+    const view = mount();
+    fireEvent.click(screen.getByText("Unlock"));
+    auth.sessionId = "new-login";
+    view.rerender(<PinProvider><App /></PinProvider>);
+    expect(screen.getByText("locked")).toBeInTheDocument();
+  });
+
+  it("does not clear the saved unlock during authentication initialization", () => {
+    const first = mount();
+    fireEvent.click(screen.getByText("Unlock"));
+    first.unmount();
+    sessionStorage.clear();
+    auth.user = null;
+    auth.loading = true;
+    const second = mount();
+    auth.user = { id: "user-a" };
+    auth.loading = false;
+    second.rerender(<PinProvider><App /></PinProvider>);
+    expect(screen.getByText("user-a")).toBeInTheDocument();
+  });
+
+  it("does not restore the unlock if the PIN was removed", () => {
+    const first = mount();
+    fireEvent.click(screen.getByText("Unlock"));
+    first.unmount();
+    localStorage.removeItem("pulse-pin-v1:user-a");
+    mount();
     expect(screen.getByText("locked")).toBeInTheDocument();
   });
 

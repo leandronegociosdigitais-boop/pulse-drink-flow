@@ -63,9 +63,10 @@ como paga para registrar a saída efetiva do caixa.
 
 Após o primeiro login com e-mail e senha, o usuário cadastra e confirma um PIN de
 4 números neste aparelho. Desde 19/10/2026, o desbloqueio permanece durante
-a sessão aberta, sem prazo de inatividade, inclusive ao recarregar, trocar de
-aba e retornar do segundo plano. Sair da conta remove o desbloqueio. Uma nova
-sessão pede o PIN. Esta regra substitui o bloqueio anterior de 15 minutos.
+o mesmo login no aparelho, sem prazo de inatividade, inclusive ao recarregar,
+trocar de app e quando o Android recria a janela. Sair da conta, iniciar outro
+login ou redefinir o PIN remove o desbloqueio. Esta regra substitui o bloqueio
+anterior de 15 minutos e a persistência limitada à sessão da aba.
 O PIN é um bloqueio local da interface e não substitui a sessão autenticada nem
 as regras de acesso do banco. O aparelho salva um verificador derivado com salt
 aleatório e PBKDF2; o PIN não é salvo em texto. Após cinco tentativas incorretas,
@@ -111,7 +112,7 @@ seguir o guia de manutenção e não repetir esta instalação.
 ## Validação local
 
 - Verificação TypeScript sem erros.
-- Testes de interface/lógica: `npm test` (46 testes na última entrega funcional).
+- Testes de interface/lógica: `npm test` (60 testes na correção Android de 19/10).
 - Análise de código: `npm run lint` (sem erros; avisos preexistentes de Fast Refresh).
 - Compilação: `npm run build`.
 - Integração das migrações: `scripts/verify-transactions.mjs` utiliza PostgreSQL
