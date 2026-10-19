@@ -29,23 +29,23 @@ describe("desbloqueio por PIN", () => {
     now += 60001;
     await expect(verifyPin("test-user", "0123")).resolves.toBeUndefined();
   });
-  it("exige PIN inicialmente, mantém acesso ao recarregar e bloqueia após inatividade", async () => {
+  it("exige PIN inicialmente e mantém acesso ao recarregar e voltar de outra página", async () => {
     await createPin("test-user", "0123");
     const view = app();
     expect(screen.queryByTestId("private-app")).not.toBeInTheDocument();
     fireEvent.change(screen.getByLabelText("PIN de 4 números"), { target: { value: "0123" } });
     fireEvent.click(screen.getByRole("button", { name: /^Desbloquear$/ }));
-    await waitFor(() => expect(screen.getByTestId("private-app")).toBeInTheDocument());
+    await waitFor(() => expect(screen.getByTestId("private-app")).toBeInTheDocument(), { timeout: 10000 });
     vi.spyOn(document, "visibilityState", "get").mockReturnValue("hidden");
     fireEvent(document, new Event("visibilitychange"));
     expect(screen.getByTestId("private-app")).toBeInTheDocument();
     view.unmount(); app();
     expect(screen.getByTestId("private-app")).toBeInTheDocument();
-    const later = Date.now() + 15 * 60 * 1000;
+    const later = Date.now() + 24 * 60 * 60 * 1000;
     vi.spyOn(Date, "now").mockReturnValue(later);
     fireEvent(window, new Event("focus"));
-    expect(screen.queryByTestId("private-app")).not.toBeInTheDocument();
-  });
+    expect(screen.getByTestId("private-app")).toBeInTheDocument();
+  }, 15000);
   it("só cadastra o PIN após confirmação dos quatro números", async () => {
     app();
     fireEvent.change(screen.getByLabelText("PIN de 4 números"), { target: { value: "0123" } });

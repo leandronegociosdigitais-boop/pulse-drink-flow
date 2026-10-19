@@ -1,6 +1,6 @@
 import { act, cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { PinProvider, PIN_IDLE_TIMEOUT, usePinLock } from "@/contexts/PinContext";
+import { PinProvider, usePinLock } from "@/contexts/PinContext";
 
 const auth = vi.hoisted(() => ({ user: { id: "user-a" } as { id: string } | null }));
 vi.mock("@/contexts/AuthContext", () => ({ useAuth: () => auth }));
@@ -10,10 +10,10 @@ function App() {
 }
 const mount = () => render(<PinProvider><App /></PinProvider>);
 
-describe("PIN inactivity session", () => {
+describe("PIN open browser session", () => {
   beforeEach(() => {
     vi.useFakeTimers();
-    vi.setSystemTime(new Date("2026-10-16T12:00:00Z"));
+    vi.setSystemTime(new Date("2026-10-19T12:00:00Z"));
     sessionStorage.clear();
     localStorage.clear();
     localStorage.setItem("pulse-pin-v1:user-a", "configured");
@@ -21,18 +21,18 @@ describe("PIN inactivity session", () => {
   });
   afterEach(() => { cleanup(); vi.useRealTimers(); });
 
-  it("keeps an unlocked tab across reloads without extending the idle deadline", () => {
+  it("keeps an unlocked tab across reloads even after a full day", () => {
     const first = mount();
     fireEvent.click(screen.getByText("Unlock"));
-    act(() => vi.advanceTimersByTime(10 * 60 * 1000));
+    act(() => vi.advanceTimersByTime(24 * 60 * 60 * 1000));
     first.unmount();
     mount();
     expect(screen.getByText("user-a")).toBeInTheDocument();
-    act(() => vi.advanceTimersByTime(5 * 60 * 1000));
-    expect(screen.getByText("locked")).toBeInTheDocument();
+    act(() => vi.advanceTimersByTime(60 * 60 * 1000));
+    expect(screen.getByText("user-a")).toBeInTheDocument();
   });
 
-  it("extends the session for real interaction, but locks after 15 idle minutes", () => {
+  it("does not lock the open app due to inactivity", () => {
     mount();
     fireEvent.click(screen.getByText("Unlock"));
     act(() => vi.advanceTimersByTime(14 * 60 * 1000));
@@ -40,23 +40,26 @@ describe("PIN inactivity session", () => {
     act(() => vi.advanceTimersByTime(14 * 60 * 1000));
     expect(screen.getByText("user-a")).toBeInTheDocument();
     act(() => vi.advanceTimersByTime(60 * 1000));
-    expect(screen.getByText("locked")).toBeInTheDocument();
+    expect(screen.getByText("user-a")).toBeInTheDocument();
   });
 
-  it("does not let an expired session revive when a suspended tab receives input", () => {
-    mount();
+  it("requires PIN for a new browser session", () => {
+    const first = mount();
     fireEvent.click(screen.getByText("Unlock"));
-    vi.setSystemTime(Date.now() + PIN_IDLE_TIMEOUT);
-    fireEvent.pointerDown(window);
+    first.unmount();
+    sessionStorage.clear();
+    mount();
     expect(screen.getByText("locked")).toBeInTheDocument();
     expect(sessionStorage.length).toBe(0);
   });
 
-  it("keeps the unlock during a short background visit", () => {
+  it("keeps the unlock on return from a long background visit", () => {
     mount();
     fireEvent.click(screen.getByText("Unlock"));
     fireEvent(window, new Event("pagehide"));
+    act(() => vi.advanceTimersByTime(2 * 60 * 60 * 1000));
     fireEvent(document, new Event("visibilitychange"));
+    fireEvent(window, new Event("focus"));
     expect(screen.getByText("user-a")).toBeInTheDocument();
   });
 
@@ -71,7 +74,7 @@ describe("PIN inactivity session", () => {
     expect(screen.getByText("locked")).toBeInTheDocument();
   });
 
-  it.each(["broken", "0", String(new Date("2026-10-17").getTime())])("rejects an invalid stored timestamp: %s", value => {
+  it.each(["broken", "0", String(new Date("2026-10-20").getTime())])("rejects an invalid stored timestamp: %s", value => {
     sessionStorage.setItem("pulse-pin-session-v1:user-a", value);
     mount();
     expect(screen.getByText("locked")).toBeInTheDocument();

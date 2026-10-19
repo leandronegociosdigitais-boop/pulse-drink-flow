@@ -62,9 +62,10 @@ como paga para registrar a saída efetiva do caixa.
 ## PIN de abertura
 
 Após o primeiro login com e-mail e senha, o usuário cadastra e confirma um PIN de
-4 números neste aparelho. O desbloqueio permanece na recarga da mesma aba e
-em um retorno breve do segundo plano. O PIN é solicitado após 15 minutos de
-inatividade; sair da conta remove o desbloqueio. Uma nova sessão pode pedir o PIN.
+4 números neste aparelho. Desde 19/10/2026, o desbloqueio permanece durante
+a sessão aberta, sem prazo de inatividade, inclusive ao recarregar, trocar de
+aba e retornar do segundo plano. Sair da conta remove o desbloqueio. Uma nova
+sessão pede o PIN. Esta regra substitui o bloqueio anterior de 15 minutos.
 O PIN é um bloqueio local da interface e não substitui a sessão autenticada nem
 as regras de acesso do banco. O aparelho salva um verificador derivado com salt
 aleatório e PBKDF2; o PIN não é salvo em texto. Após cinco tentativas incorretas,

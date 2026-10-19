@@ -16,7 +16,9 @@
   e lucro usam a data do recebimento, também para vendas antigas.
 - Manter operações críticas atômicas; não substituir uma RPC com erro por
   gravações independentes que deixem a operação pela metade.
-- O PIN mantém acesso na recarga e bloqueia após 15 minutos sem interação.
+- Desde 19/10/2026, o PIN é solicitado ao iniciar uma nova sessão. Não bloquear
+  por inatividade, recarga, troca de aba ou retorno do segundo plano enquanto
+  a sessão permanecer aberta. Sair da conta remove o desbloqueio.
 - Nunca incluir credenciais, PINs ou backups no repositório público.
 - Validar o comportamento afetado e seguir GitHub → Lovable → publicação.
   Documentar mudanças de regras ou acessos no guia de manutenção.
