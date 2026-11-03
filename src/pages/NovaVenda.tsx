@@ -1,3 +1,6 @@
+import { saleTotals, sumMoney } from "@/lib/money";
+import { fifoCost } from "@/lib/purchaseCosts";
+import { usePurchaseBatches } from "@/hooks/usePurchases";
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Plus, Minus, Trash2, ShoppingBag, Percent } from "lucide-react";
@@ -29,6 +32,7 @@ export default function NovaVenda() {
   const { data: products = [] } = useProducts();
   const { data: customers = [] } = useCustomers();
   const createSale = useCreateSale();
+  const { data: batches, isError: costsError } = usePurchaseBatches();
   const createCustomer = useCreateCustomer();
 
   const [items, setItems] = useState<SaleItemInput[]>([]);
@@ -43,25 +47,12 @@ export default function NovaVenda() {
     p.name.toLowerCase().includes(search.toLowerCase())
   );
 
-  const subtotal = items.reduce((acc, item) => 
-    acc + item.product.sale_price * item.quantity, 0
+  const { subtotal, discountAmount, totalAmount } = saleTotals(
+    items.map(item => ({ quantity: item.quantity, unit_price: item.product.sale_price })), discountType, discountValue
   );
-
-  // Calcular desconto
-  const discountAmount = (() => {
-    const val = parseFloat(discountValue) || 0;
-    if (discountType === "percent") {
-      return Math.min((subtotal * val) / 100, subtotal);
-    }
-    return Math.min(val, subtotal);
-  })();
-
-  const totalAmount = subtotal - discountAmount;
-
-  // Lucro estimado (custo real será calculado via FIFO no momento da venda)
-  const estimatedProfit = items.reduce((acc, item) =>
-    acc + (item.product.sale_price - item.product.cost_price) * item.quantity, 0
-  ) - discountAmount;
+  const costs = batches && !costsError ? items.map(item => fifoCost(batches, item.product.id, item.quantity)) : null;
+  const estimatedProfit = costs && costs.every(cost => cost !== null)
+    ? sumMoney([totalAmount, -sumMoney(costs as number[])]) : null;
 
   const addItem = (product: typeof products[0]) => {
     if (product.stock_quantity <= 0) {
@@ -382,8 +373,8 @@ export default function NovaVenda() {
                 </p>
               </div>
               <div className="text-right">
-                <p className="text-xs text-muted-foreground">Lucro</p>
-                <p className="text-sm text-primary">{formatCurrency(estimatedProfit > 0 ? estimatedProfit : 0)}</p>
+                <p className="text-xs text-muted-foreground">Lucro estimado</p>
+                <p className="text-sm text-primary">{estimatedProfit === null ? "Custo indisponível" : formatCurrency(estimatedProfit)}</p>
                 {isPending && (
                   <Badge variant="outline" className="mt-1 text-warning border-warning">
                     Pendente

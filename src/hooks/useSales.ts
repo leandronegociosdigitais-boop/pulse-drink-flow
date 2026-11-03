@@ -160,8 +160,9 @@ export function useCreateSale() {
       queryClient.invalidateQueries({ queryKey: ["received_sales"] });
       queryClient.invalidateQueries({ queryKey: ["product_sales_report"] });
       queryClient.invalidateQueries({ queryKey: ["products"] });
-      queryClient.invalidateQueries({ queryKey: ["cash_flow"] });
+      queryClient.invalidateQueries({ queryKey: ["investment"] });
       queryClient.invalidateQueries({ queryKey: ["purchase_batches"] });
+      queryClient.invalidateQueries({ queryKey: ["cash_flow"] });
       queryClient.invalidateQueries({ queryKey: ["inventory_movements"] });
       toast({ title: "Venda registrada com sucesso!" });
     },
@@ -214,6 +215,7 @@ export function useUpdatePendingSale() {
       queryClient.invalidateQueries({ queryKey: ["sales"] });
       queryClient.invalidateQueries({ queryKey: ["monthly_report"] });
       queryClient.invalidateQueries({ queryKey: ["products"] });
+      queryClient.invalidateQueries({ queryKey: ["investment"] });
       queryClient.invalidateQueries({ queryKey: ["purchase_batches"] });
       queryClient.invalidateQueries({ queryKey: ["inventory_movements"] });
       toast({ title: "Venda pendente atualizada!" });
@@ -236,6 +238,7 @@ export function useDeletePendingSale() {
       queryClient.invalidateQueries({ queryKey: ["sales"] });
       queryClient.invalidateQueries({ queryKey: ["monthly_report"] });
       queryClient.invalidateQueries({ queryKey: ["products"] });
+      queryClient.invalidateQueries({ queryKey: ["investment"] });
       queryClient.invalidateQueries({ queryKey: ["purchase_batches"] });
       queryClient.invalidateQueries({ queryKey: ["inventory_movements"] });
       toast({ title: "Venda pendente excluída!" });

@@ -1,3 +1,4 @@
+import { readReportRows } from "@/lib/reportQueries";
 import { runOperation } from "@/lib/operations";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -23,18 +24,16 @@ export function usePurchaseBatches(productId?: string) {
   return useQuery({
     queryKey: ["purchase_batches", productId],
     queryFn: async () => {
-      let query = supabase
-        .from("purchase_batches")
-        .select("*, products(name)")
-        .order("created_at", { ascending: true });
-      
-      if (productId) {
-        query = query.eq("product_id", productId);
-      }
-
-      const { data, error } = await query;
-      if (error) throw error;
-      return data;
+      return readReportRows((from, to) => {
+        let query = supabase
+          .from("purchase_batches")
+          .select("*, products(name)")
+          .order("created_at", { ascending: true });
+        if (productId) {
+          query = query.eq("product_id", productId);
+        }
+        return query.order("id").range(from, to);
+      });
     },
   });
 }
@@ -62,6 +61,8 @@ export function useCreatePurchase() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["purchases"] });
+      queryClient.invalidateQueries({ queryKey: ["investment"] });
+      queryClient.invalidateQueries({ queryKey: ["monthly_investment"] });
       queryClient.invalidateQueries({ queryKey: ["bills"] });
       queryClient.invalidateQueries({ queryKey: ["monthly_report"] });
       queryClient.invalidateQueries({ queryKey: ["purchase_batches"] });

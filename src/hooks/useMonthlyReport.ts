@@ -1,3 +1,4 @@
+import { sumMoney } from "@/lib/money";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { fetchReceivedSales, fetchReceivedItems, readReportRows } from "@/lib/reportQueries";
@@ -39,8 +40,8 @@ export function useMonthlyReport(year: number, month: number) {
 
       // Recognize payment in the month it reaches cash, including legacy receipts.
       const paidSales = receivedBetween(await fetchReceivedSales(), start, end);
-      const totalSold = paidSales.reduce((acc, s) => acc + Number(s.total_amount), 0);
-      const totalProfit = paidSales.reduce((acc, s) => acc + Number(s.total_profit), 0);
+      const totalSold = sumMoney(paidSales.map(s => s.total_amount));
+      const totalProfit = sumMoney(paidSales.map(s => s.total_profit));
       const totalSales = paidSales.length;
 
       const saleIds = paidSales.map((s) => s.id);
@@ -57,8 +58,8 @@ export function useMonthlyReport(year: number, month: number) {
           const cur = map.get(pid);
           if (cur) {
             cur.total_quantity += item.quantity;
-            cur.total_revenue += Number(item.subtotal);
-            cur.total_profit += Number(item.profit);
+            cur.total_revenue = sumMoney([cur.total_revenue, item.subtotal]);
+            cur.total_profit = sumMoney([cur.total_profit, item.profit]);
           } else {
             map.set(pid, {
               product_id: pid,

@@ -100,7 +100,7 @@ export default function NovoProduto() {
 
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-2">
-                <Label htmlFor="cost_price">Preço de Custo</Label>
+                <Label htmlFor="cost_price">Custo do estoque inicial</Label>
                 <Input
                   id="cost_price"
                   type="number"
@@ -123,6 +123,7 @@ export default function NovoProduto() {
               </div>
             </div>
 
+            <p className="text-xs text-muted-foreground">Este custo vale para o estoque inicial. Nas próximas compras, informe o valor pago em cada compra.</p>
             {/* Lucro automático */}
             {salePrice > 0 && (
               <div className={`p-3 rounded-lg ${profit >= 0 ? "bg-primary/10" : "bg-destructive/10"}`}>

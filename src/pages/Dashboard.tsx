@@ -1,3 +1,4 @@
+import { sumMoney } from "@/lib/money";
 import { useState, useEffect } from "react";
 import { DollarSign, TrendingUp, Wallet, ShoppingCart, Download, X } from "lucide-react";
 import { useNavigate } from "react-router-dom";
@@ -65,9 +66,9 @@ export default function Dashboard() {
     setShowInstallBanner(false);
   };
 
-  const todayTotal = todaySales.reduce((acc, sale) => acc + sale.total_amount, 0);
-  const monthTotal = monthSales.reduce((acc, sale) => acc + sale.total_amount, 0);
-  const totalProfit = monthSales.reduce((acc, sale) => acc + sale.total_profit, 0);
+  const todayTotal = sumMoney(todaySales.map(s => s.total_amount));
+  const monthTotal = sumMoney(monthSales.map(s => s.total_amount));
+  const totalProfit = sumMoney(monthSales.map(s => s.total_profit));
 
   // Gerar dados do gráfico baseado no período selecionado
   const getChartData = () => {
@@ -80,7 +81,7 @@ export default function Dashboard() {
         const date = new Date();
         date.setHours(date.getHours() - (23 - i), 0, 0, 0);
         const hourEnd = new Date(date.getTime() + 60 * 60 * 1000);
-        const hourTotal = receivedBetween(allSales, date, hourEnd).reduce((acc, s) => acc + s.total_amount, 0);
+        const hourTotal = sumMoney(receivedBetween(allSales, date, hourEnd).map(s => s.total_amount));
 
         return {
           date: date.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" }),
@@ -100,7 +101,7 @@ export default function Dashboard() {
       date.setDate(date.getDate() - (days - 1 - i));
       const start = new Date(date.getFullYear(), date.getMonth(), date.getDate());
       const end = new Date(date.getFullYear(), date.getMonth(), date.getDate() + 1);
-      const dayTotal = receivedBetween(allSales, start, end).reduce((acc, s) => acc + s.total_amount, 0);
+      const dayTotal = sumMoney(receivedBetween(allSales, start, end).map(s => s.total_amount));
 
       return {
         date: date.toLocaleDateString("pt-BR", dateFormat),

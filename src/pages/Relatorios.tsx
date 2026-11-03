@@ -1,3 +1,4 @@
+import { sumMoney } from "@/lib/money";
 import { useState } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -57,14 +58,14 @@ export default function Relatorios() {
   });
 
   // Cálculos de vendas
-  const totalSold = monthSales.reduce((acc, s) => acc + s.total_amount, 0);
-  const totalProfit = monthSales.reduce((acc, s) => acc + s.total_profit, 0);
+  const totalSold = sumMoney(monthSales.map(s => s.total_amount));
+  const totalProfit = sumMoney(monthSales.map(s => s.total_profit));
   const avgTicket = monthSales.length > 0 ? totalSold / monthSales.length : 0;
 
   // Vendas por forma de pagamento
   const salesByPayment = monthSales.reduce((acc, sale) => {
     const key = sale.payment_method;
-    acc[key] = (acc[key] || 0) + sale.total_amount;
+    acc[key] = sumMoney([acc[key] || 0, sale.total_amount]);
     return acc;
   }, {} as Record<string, number>);
 
