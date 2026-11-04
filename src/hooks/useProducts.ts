@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Product } from "@/types/database";
+import { readReportRows } from "@/lib/reportQueries";
 import { toast } from "@/hooks/use-toast";
 
 interface StockAdjustmentInput {
@@ -13,12 +14,7 @@ export function useProducts() {
   return useQuery({
     queryKey: ["products"],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("products")
-        .select("*")
-        .order("name");
-
-      if (error) throw error;
+      const data = await readReportRows((from, to) => supabase.from("products").select("*").order("name").order("id").range(from, to));
       return data as Product[];
     },
   });
@@ -85,6 +81,8 @@ export function useCreateProduct() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["products"] });
+      queryClient.invalidateQueries({ queryKey: ["investment"] });
+      queryClient.invalidateQueries({ queryKey: ["purchase_batches"] });
       toast({ title: "Produto cadastrado com sucesso!" });
     },
     onError: (error) => {
@@ -111,6 +109,8 @@ export function useUpdateProduct() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["products"] });
+      queryClient.invalidateQueries({ queryKey: ["investment"] });
+      queryClient.invalidateQueries({ queryKey: ["purchase_batches"] });
       toast({ title: "Produto atualizado com sucesso!" });
     },
     onError: (error) => {
@@ -214,6 +214,7 @@ export function useAdjustProductStock() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["products"] });
+      queryClient.invalidateQueries({ queryKey: ["investment"] });
       queryClient.invalidateQueries({ queryKey: ["purchase_batches"] });
       queryClient.invalidateQueries({ queryKey: ["inventory_movements"] });
     },
@@ -237,6 +238,8 @@ export function useDeleteProduct() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["products"] });
+      queryClient.invalidateQueries({ queryKey: ["investment"] });
+      queryClient.invalidateQueries({ queryKey: ["purchase_batches"] });
       toast({ title: "Produto excluído com sucesso!" });
     },
     onError: (error) => {

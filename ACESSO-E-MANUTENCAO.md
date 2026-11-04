@@ -210,3 +210,22 @@ Pasta original na máquina da entrega:
 `%USERPROFILE%\Desktop\Projetos\pulse-drink-flow`. Cópias auxiliares de correção
 e release também foram usadas. Em outra máquina, clonar o GitHub oficial; não
 escolher uma cópia apenas pelo nome.
+
+
+## Auditoria de custos e somas — 03/11/2026 (alterações locais)
+
+- Custos de venda seguem PEPS/FIFO: lotes mais antigos por created_at e id.
+- A prévia de nova venda usa os lotes disponíveis, desconta o abatimento e mostra
+  prejuízos. Se a leitura dos lotes falhar ou faltar estoque, não inventa custo.
+- Estoque e detalhe mostram custo/lucro da próxima unidade, conforme o lote.
+- O custo editável no cadastro serve somente para estoque inicial e novas
+  entradas manuais; compras usam seu próprio custo. Não reprecificar lotes antigos.
+- Totais de vendas e lucro são somados em centavos. Descontos percentuais são
+  arredondados antes da confirmação, como na operação do banco.
+- Custo total por produto usa receita líquida menos lucro salvo. Multiplicar o
+  custo unitário médio arredondado pela quantidade pode perder centavos.
+- Leituras de lotes, estoque investido e compras do mês são paginadas. Operações
+  de estoque invalidam também os valores derivados, para atualizar o dashboard.
+- Lucro do mês continua reconhecendo apenas vendas pagas na data do recebimento.
+  Vendas pendentes permanecem em A Receber com lucro previsto.
+- Não houve migração, regravação do histórico ou alteração de produção nesta etapa.

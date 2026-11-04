@@ -1,3 +1,4 @@
+import { saleTotals } from "@/lib/money";
 import { availableSaleStock, originalSaleProduct } from "@/lib/saleEditing";
 import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
@@ -76,20 +77,9 @@ export default function EditarVenda() {
     p.name.toLowerCase().includes(search.toLowerCase())
   );
 
-  const subtotal = items.reduce(
-    (acc, item) => acc + item.product.sale_price * item.quantity,
-    0
+  const { subtotal, discountAmount, totalAmount } = saleTotals(
+    items.map(item => ({ quantity: item.quantity, unit_price: item.product.sale_price })), discountType, discountValue
   );
-
-  const discountAmount = (() => {
-    const val = parseFloat(discountValue) || 0;
-    if (discountType === "percent") {
-      return Math.min((subtotal * val) / 100, subtotal);
-    }
-    return Math.min(val, subtotal);
-  })();
-
-  const totalAmount = subtotal - discountAmount;
 
   // Estoque disponível = estoque atual + qty reservada pelos itens ORIGINAIS da venda
   // menos a qty dos itens que o usuário já removeu localmente

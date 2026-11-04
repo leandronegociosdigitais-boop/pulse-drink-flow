@@ -1,6 +1,7 @@
+import { roundMoney, sumMoney } from "@/lib/money";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { fetchReceivedSales, fetchReceivedItems } from "@/lib/reportQueries";
+import { fetchReceivedSales, fetchReceivedItems, readReportRows } from "@/lib/reportQueries";
 import { receivedBetween, netReceivedItems } from "@/lib/receivedSales";
 
 interface SaleItemWithProduct {
@@ -74,9 +75,9 @@ export function useProductSalesReport() {
         
         if (existing) {
           existing.total_quantity += item.quantity;
-          existing.total_revenue += item.subtotal;
-          existing.total_profit += item.profit;
-          existing.total_cost += item.unit_cost * item.quantity;
+          existing.total_revenue = sumMoney([existing.total_revenue, item.subtotal]);
+          existing.total_profit = sumMoney([existing.total_profit, item.profit]);
+          existing.total_cost = sumMoney([existing.total_cost, roundMoney(item.subtotal - item.profit)]);
         } else {
           productMap.set(productId, {
             product_id: productId,
@@ -85,7 +86,7 @@ export function useProductSalesReport() {
             total_quantity: item.quantity,
             total_revenue: item.subtotal,
             total_profit: item.profit,
-            total_cost: item.unit_cost * item.quantity,
+            total_cost: roundMoney(item.subtotal - item.profit),
           });
         }
       }
@@ -103,14 +104,12 @@ export function useMonthlyInvestment() {
       startOfMonth.setDate(1);
       startOfMonth.setHours(0, 0, 0, 0);
 
-      const { data, error } = await supabase
+      const data = await readReportRows((from, to) => supabase
         .from("purchases")
         .select("total_amount")
-        .gte("created_at", startOfMonth.toISOString());
-
-      if (error) throw error;
-
-      return data.reduce((acc, p) => acc + p.total_amount, 0);
+        .gte("created_at", startOfMonth.toISOString())
+        .lt("created_at", new Date(startOfMonth.getFullYear(), startOfMonth.getMonth() + 1, 1).toISOString()).order("id").range(from, to));
+      return sumMoney(data.map(p => p.total_amount));
     },
   });
 }

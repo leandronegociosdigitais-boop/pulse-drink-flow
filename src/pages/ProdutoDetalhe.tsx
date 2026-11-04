@@ -1,3 +1,5 @@
+import { usePurchaseBatches } from "@/hooks/usePurchases";
+import { fifoCost } from "@/lib/purchaseCosts";
 import { useState, useEffect } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { ArrowLeft, Save, Trash2, Plus, Minus } from "lucide-react";
@@ -31,6 +33,7 @@ export default function ProdutoDetalhe() {
   const { id } = useParams<{ id: string }>();
   const { data: products = [], isLoading } = useProducts();
   const updateProduct = useUpdateProduct();
+  const { data: batches, isError: costsError } = usePurchaseBatches();
   const adjustProductStock = useAdjustProductStock();
   const deleteProduct = useDeleteProduct();
 
@@ -111,8 +114,9 @@ export default function ProdutoDetalhe() {
     );
   }
 
-  const profit = (parseFloat(salePrice) || 0) - (parseFloat(costPrice) || 0);
-  const profitMargin = parseFloat(salePrice) > 0 ? (profit / parseFloat(salePrice)) * 100 : 0;
+  const purchaseCost = batches && !costsError ? fifoCost(batches, product.id, 1) : null;
+  const profit = purchaseCost === null ? null : (parseFloat(salePrice) || 0) - purchaseCost;
+  const profitMargin = profit !== null && parseFloat(salePrice) > 0 ? (profit / parseFloat(salePrice)) * 100 : 0;
   const finalStock = stockQuantity + stockAdjustment;
 
   return (
@@ -226,7 +230,7 @@ export default function ProdutoDetalhe() {
 
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-2">
-                <Label htmlFor="costPrice">Preço de Custo (R$)</Label>
+                <Label htmlFor="costPrice">Custo para entrada manual (R$)</Label>
                 <Input
                   id="costPrice"
                   type="number"
@@ -249,12 +253,13 @@ export default function ProdutoDetalhe() {
               </div>
             </div>
 
+            <p className="text-xs text-muted-foreground">Compras usam o custo informado em cada compra. Este campo vale apenas para novas entradas manuais e não altera lotes existentes.</p>
             {/* Profit Display */}
             <div className="p-3 rounded-lg bg-primary/10 border border-primary/20">
               <div className="flex justify-between items-center">
-                <span className="text-sm text-muted-foreground">Lucro por unidade:</span>
+                <span className="text-sm text-muted-foreground">Lucro próxima unidade:</span>
                 <span className="font-semibold text-primary">
-                  {formatCurrency(profit)} ({profitMargin.toFixed(0)}%)
+                  {profit === null ? "Custo indisponível" : `${formatCurrency(profit)} (${profitMargin.toFixed(0)}%)` }
                 </span>
               </div>
             </div>

@@ -1,3 +1,5 @@
+import { usePurchaseBatches } from "@/hooks/usePurchases";
+import { fifoCost } from "@/lib/purchaseCosts";
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Plus, Search, Package, History, AlertTriangle } from "lucide-react";
@@ -20,6 +22,7 @@ function formatCurrency(value: number) {
 export default function Estoque() {
   const navigate = useNavigate();
   const { data: products = [], isLoading } = useProducts();
+  const { data: batches, isError: costsError } = usePurchaseBatches();
   const [search, setSearch] = useState("");
   const [stockFilter, setStockFilter] = useState<"todos" | "zerados" | "criticos">("todos");
 
@@ -110,7 +113,8 @@ export default function Estoque() {
           ) : (
             filteredProducts.map((product) => {
               const status = getStockStatus(product);
-              const profit = product.sale_price - product.cost_price;
+              const cost = batches && !costsError ? fifoCost(batches, product.id, 1) : null;
+              const profit = cost === null ? null : product.sale_price - cost;
               
               return (
                 <Card
@@ -136,11 +140,11 @@ export default function Estoque() {
                           </Badge>
                         </div>
                         <div className="flex items-center gap-4 text-sm text-muted-foreground">
-                          <span>Custo: {formatCurrency(product.cost_price)}</span>
+                          <span>Custo próxima unidade: {cost === null ? "Indisponível" : formatCurrency(cost)}</span>
                           <span>Venda: {formatCurrency(product.sale_price)}</span>
                         </div>
                         <p className="text-xs text-primary mt-1">
-                          Lucro: {formatCurrency(profit)} ({product.sale_price > 0 ? ((profit / product.sale_price) * 100).toFixed(0) : 0}%)
+                          Lucro próxima unidade: {profit === null ? "Indisponível" : formatCurrency(profit)}
                         </p>
                       </div>
                       <div className="text-right shrink-0">
