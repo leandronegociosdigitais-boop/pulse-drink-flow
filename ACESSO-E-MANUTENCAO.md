@@ -229,3 +229,21 @@ escolher uma cópia apenas pelo nome.
 - Lucro do mês continua reconhecendo apenas vendas pagas na data do recebimento.
   Vendas pendentes permanecem em A Receber com lucro previsto.
 - Não houve migração, regravação do histórico ou alteração de produção nesta etapa.
+
+## Edição e exclusão de vendas confirmadas — preparada para implantação
+
+- A tela de detalhes oferece Editar e Excluir também para vendas pagas.
+- Editar preserva o status pago e a data original do recebimento; corrige o valor
+  do lançamento existente no caixa, recalcula lucro e ajusta os lotes por FIFO.
+- Excluir exige confirmação, devolve as quantidades aos lotes e remove somente
+  o recebimento vinculado à venda. Não representa um reembolso bancário automático.
+- A operação inteira é transacional. Qualquer erro desfaz as alterações de
+  estoque, itens e caixa. As mesmas regras continuam válidas para pendentes.
+- Venda paga precisa ter um único recebimento vinculado e compatível com o total.
+  Histórico financeiro ou de lotes ambíguo exige conferência; não adivinhar custos
+  nem apagar lançamentos para contornar esse bloqueio.
+- Antes de publicar a interface, conferir o histórico real de migrações e exportar
+  um backup completo validado. Aplicar apenas
+  `20261103230000_manage_confirmed_sales.sql`, que substitui a função de operação
+  sem reescrever registros existentes. Não reaplicar as migrações anteriores.
+- Esta seção descreve a mudança preparada; não confirma aplicação em produção.

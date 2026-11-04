@@ -16,7 +16,7 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
-import { useSaleById, useMarkSaleAsPaid, useDeletePendingSale } from "@/hooks/useSales";
+import { useSaleById, useMarkSaleAsPaid, useDeleteSale } from "@/hooks/useSales";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 
@@ -40,7 +40,7 @@ export default function VendaDetalhe() {
   const navigate = useNavigate();
   const { data: sale, isLoading } = useSaleById(id!);
   const markAsPaid = useMarkSaleAsPaid();
-  const deleteSale = useDeletePendingSale();
+  const deleteSale = useDeleteSale();
 
   if (isLoading) {
     return (
@@ -173,9 +173,9 @@ export default function VendaDetalhe() {
           </CardContent>
         </Card>
 
-        {/* Ações para venda pendente */}
-        {sale.status === "pendente" && (
+        {/* Ações da venda */}
           <div className="space-y-2">
+            {sale.status === "pendente" && (
             <Button
               className="w-full glow-neon"
               onClick={async () => {
@@ -191,9 +191,11 @@ export default function VendaDetalhe() {
               <Check className="w-4 h-4 mr-2" />
               Marcar como Pago
             </Button>
+            )}
             <div className="grid grid-cols-2 gap-2">
               <Button
                 variant="outline"
+                disabled={deleteSale.isPending || markAsPaid.isPending}
                 onClick={() => navigate(`/vendas/${sale.id}/editar`)}
               >
                 <Pencil className="w-4 h-4 mr-2" />
@@ -201,25 +203,28 @@ export default function VendaDetalhe() {
               </Button>
               <AlertDialog>
                 <AlertDialogTrigger asChild>
-                  <Button variant="outline" className="text-destructive border-destructive/50 hover:bg-destructive/10">
+                  <Button disabled={deleteSale.isPending || markAsPaid.isPending} variant="outline" className="text-destructive border-destructive/50 hover:bg-destructive/10">
                     <Trash2 className="w-4 h-4 mr-2" />
                     Excluir
                   </Button>
                 </AlertDialogTrigger>
                 <AlertDialogContent>
                   <AlertDialogHeader>
-                    <AlertDialogTitle>Excluir venda pendente?</AlertDialogTitle>
+                    <AlertDialogTitle>Excluir venda?</AlertDialogTitle>
                     <AlertDialogDescription>
-                      O estoque dos produtos será restaurado automaticamente. Esta ação não pode ser desfeita.
+                      O estoque dos produtos será restaurado automaticamente. {sale.status === "pago" && "O recebimento desta venda será removido do caixa e o lucro será atualizado. "}Esta ação não pode ser desfeita.
                     </AlertDialogDescription>
                   </AlertDialogHeader>
                   <AlertDialogFooter>
                     <AlertDialogCancel>Cancelar</AlertDialogCancel>
                     <AlertDialogAction
                       onClick={async () => {
-                        await deleteSale.mutateAsync(sale.id);
-                        navigate("/vendas");
+                        try {
+                          await deleteSale.mutateAsync(sale.id);
+                          navigate("/vendas");
+                        } catch { /* O aviso da operação apresenta o erro. */ }
                       }}
+                      disabled={deleteSale.isPending}
                       className="bg-destructive hover:bg-destructive/90"
                     >
                       Excluir
@@ -229,7 +234,6 @@ export default function VendaDetalhe() {
               </AlertDialog>
             </div>
           </div>
-        )}
       </div>
     </AppLayout>
   );

@@ -12,7 +12,7 @@ import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { useProducts } from "@/hooks/useProducts";
-import { useSaleById, useUpdatePendingSale } from "@/hooks/useSales";
+import { useSaleById, useUpdateSale } from "@/hooks/useSales";
 import { useCustomers, useCreateCustomer } from "@/hooks/useCustomers";
 import { SaleItemInput, PaymentMethod } from "@/types/database";
 import { toast } from "@/hooks/use-toast";
@@ -31,7 +31,7 @@ export default function EditarVenda() {
   const { data: products = [] } = useProducts();
   const { data: customers = [] } = useCustomers();
   const { data: sale, isLoading } = useSaleById(id || "");
-  const updateSale = useUpdatePendingSale();
+  const updateSale = useUpdateSale();
   const createCustomer = useCreateCustomer();
 
   const [items, setItems] = useState<SaleItemInput[]>([]);
@@ -45,16 +45,6 @@ export default function EditarVenda() {
   // Hydrate from existing sale once products + sale are loaded
   useEffect(() => {
     if (!sale || hydrated || products.length === 0) return;
-    if (sale.status !== "pendente") {
-      toast({
-        title: "Venda não pode ser editada",
-        description: "Apenas vendas pendentes podem ser modificadas.",
-        variant: "destructive",
-      });
-      navigate(`/vendas/${id}`);
-      return;
-    }
-
     const initialItems: SaleItemInput[] = sale.items
       .map((it) => {
         const product = products.find((p) => p.id === it.product_id);
@@ -168,7 +158,7 @@ export default function EditarVenda() {
   if (isLoading || !hydrated) {
     return (
       <AppLayout>
-        <PageHeader title="Editar Venda Pendente" showBack />
+        <PageHeader title="Editar Venda" showBack />
         <div className="p-8 text-center text-muted-foreground">Carregando...</div>
       </AppLayout>
     );
@@ -176,7 +166,8 @@ export default function EditarVenda() {
 
   return (
     <AppLayout>
-      <PageHeader title="Editar Venda Pendente" showBack />
+      <PageHeader title="Editar Venda" showBack />
+      {sale?.status === "pago" && <p className="px-4 pt-4 text-sm text-muted-foreground">Ao salvar, o estoque, o lucro e o recebimento no caixa serão corrigidos. A data original do pagamento será mantida.</p>}
 
       <div className="p-4 space-y-4 pb-32">
         <Input
@@ -366,8 +357,8 @@ export default function EditarVenda() {
                   {formatCurrency(totalAmount)}
                 </p>
               </div>
-              <Badge variant="outline" className="text-warning border-warning">
-                Pendente
+              <Badge variant="outline" className={sale?.status === "pago" ? "text-success border-success" : "text-warning border-warning"}>
+                {sale?.status === "pago" ? "Pago" : "Pendente"}
               </Badge>
             </div>
             <Button

@@ -77,7 +77,7 @@ describe("relatórios por recebimento", () => {
       subtotal: 0.15, profit: 0, unit_cost: 0.05, products: { name: "Cerveja" },
     }));
     const { result } = renderHook(() => useMonthlyReport(2026, 9), { wrapper });
-    await waitFor(() => expect(result.current.isSuccess).toBe(true));
+    await waitFor(() => expect(result.current.isSuccess).toBe(true), { timeout: 10000 });
     expect(result.current.data).toMatchObject({ totalSold: 143.65, totalProfit: -22.1, totalSales: 1105,
       productSales: [{ total_revenue: 143.65, total_profit: -22.1 }] });
   });

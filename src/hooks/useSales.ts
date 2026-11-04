@@ -159,10 +159,12 @@ export function useCreateSale() {
       queryClient.invalidateQueries({ queryKey: ["monthly_report"] });
       queryClient.invalidateQueries({ queryKey: ["received_sales"] });
       queryClient.invalidateQueries({ queryKey: ["product_sales_report"] });
+      queryClient.invalidateQueries({ queryKey: ["sale_items"] });
+      queryClient.invalidateQueries({ queryKey: ["cashflow_sale_items"] });
+      queryClient.invalidateQueries({ queryKey: ["cash_flow"] });
       queryClient.invalidateQueries({ queryKey: ["products"] });
       queryClient.invalidateQueries({ queryKey: ["investment"] });
       queryClient.invalidateQueries({ queryKey: ["purchase_batches"] });
-      queryClient.invalidateQueries({ queryKey: ["cash_flow"] });
       queryClient.invalidateQueries({ queryKey: ["inventory_movements"] });
       toast({ title: "Venda registrada com sucesso!" });
     },
@@ -182,6 +184,8 @@ export function useMarkSaleAsPaid() {
       queryClient.invalidateQueries({ queryKey: ["monthly_report"] });
       queryClient.invalidateQueries({ queryKey: ["received_sales"] });
       queryClient.invalidateQueries({ queryKey: ["product_sales_report"] });
+      queryClient.invalidateQueries({ queryKey: ["sale_items"] });
+      queryClient.invalidateQueries({ queryKey: ["cashflow_sale_items"] });
       queryClient.invalidateQueries({ queryKey: ["cash_flow"] });
       toast({ title: "Venda marcada como paga!" });
     },
@@ -191,7 +195,7 @@ export function useMarkSaleAsPaid() {
   });
 }
 
-interface UpdatePendingSaleInput {
+interface UpdateSaleInput {
   saleId: string;
   items: SaleItemInput[];
   payment_method: PaymentMethod;
@@ -200,25 +204,29 @@ interface UpdatePendingSaleInput {
 }
 
 /**
- * Edit a pending sale: restore previous batches, recompute via FIFO with new items.
- * Only allowed for sales with status="pendente".
+ * Edit a sale atomically: restore batches, recompute FIFO and correct its receipt if paid.
  */
-export function useUpdatePendingSale() {
+export function useUpdateSale() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async ({ saleId, items, payment_method, customer_id, discount_amount = 0 }: UpdatePendingSaleInput) => {
+    mutationFn: async ({ saleId, items, payment_method, customer_id, discount_amount = 0 }: UpdateSaleInput) => {
       return runOperation<Sale>({ action: "update_sale", id: saleId, payment_method, customer_id: customer_id || null,
         discount_amount, items: items.map(i => ({ product_id: i.product.id, quantity: i.quantity, unit_price: i.product.sale_price })) });
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["sales"] });
       queryClient.invalidateQueries({ queryKey: ["monthly_report"] });
+      queryClient.invalidateQueries({ queryKey: ["received_sales"] });
+      queryClient.invalidateQueries({ queryKey: ["product_sales_report"] });
+      queryClient.invalidateQueries({ queryKey: ["sale_items"] });
+      queryClient.invalidateQueries({ queryKey: ["cashflow_sale_items"] });
+      queryClient.invalidateQueries({ queryKey: ["cash_flow"] });
       queryClient.invalidateQueries({ queryKey: ["products"] });
       queryClient.invalidateQueries({ queryKey: ["investment"] });
       queryClient.invalidateQueries({ queryKey: ["purchase_batches"] });
       queryClient.invalidateQueries({ queryKey: ["inventory_movements"] });
-      toast({ title: "Venda pendente atualizada!" });
+      toast({ title: "Venda atualizada!" });
     },
     onError: (error) => {
       toast({ title: "Erro ao atualizar venda", description: error.message, variant: "destructive" });
@@ -227,9 +235,9 @@ export function useUpdatePendingSale() {
 }
 
 /**
- * Delete a pending sale and restore its stock.
+ * Delete a sale atomically, restoring stock and removing its linked receipt.
  */
-export function useDeletePendingSale() {
+export function useDeleteSale() {
   const queryClient = useQueryClient();
 
   return useMutation({
@@ -237,11 +245,16 @@ export function useDeletePendingSale() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["sales"] });
       queryClient.invalidateQueries({ queryKey: ["monthly_report"] });
+      queryClient.invalidateQueries({ queryKey: ["received_sales"] });
+      queryClient.invalidateQueries({ queryKey: ["product_sales_report"] });
+      queryClient.invalidateQueries({ queryKey: ["sale_items"] });
+      queryClient.invalidateQueries({ queryKey: ["cashflow_sale_items"] });
+      queryClient.invalidateQueries({ queryKey: ["cash_flow"] });
       queryClient.invalidateQueries({ queryKey: ["products"] });
       queryClient.invalidateQueries({ queryKey: ["investment"] });
       queryClient.invalidateQueries({ queryKey: ["purchase_batches"] });
       queryClient.invalidateQueries({ queryKey: ["inventory_movements"] });
-      toast({ title: "Venda pendente excluída!" });
+      toast({ title: "Venda excluída!" });
     },
     onError: (error) => {
       toast({ title: "Erro ao excluir venda", description: error.message, variant: "destructive" });
